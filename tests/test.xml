@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<marc:collection xsi:schemaLocation="http://www.loc.gov/MARC21/slim http://www.loc.gov/standards/marcxml/schema/MARC21slim.xsd" xmlns:marc="http://www.loc.gov/MARC21/slim" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+    <marc:record>
+        <marc:leader>     njs a22     2u 4500</marc:leader>
+        <marc:controlfield tag="001">00-AA-0000001</marc:controlfield>
+        <marc:controlfield tag="005">20201030235721.0</marc:controlfield>
+        <marc:controlfield tag="008">201030s||||||||-hkmuz|fsaefh#######eng|d</marc:controlfield>
+        <marc:datafield tag="024" ind1="1" ind2="1">
+            <marc:subfield code="a">038081361529</marc:subfield>
+        </marc:datafield>
+        <marc:datafield tag="040" ind1=" " ind2=" ">
+            <marc:subfield code="a">Naxos</marc:subfield>
+        </marc:datafield>
+        <marc:datafield tag="245" ind1="0" ind2="0">
+            <marc:subfield code="a">Mock XML record</marc:subfield>
+            <marc:subfield code="h">[electronic resource]</marc:subfield>
+        </marc:datafield>
+        <marc:datafield tag="500" ind1=" " ind2=" ">
+            <marc:subfield code="a">Naxos Digital Services electronic collection.</marc:subfield>
+        </marc:datafield>
+        <marc:datafield tag="500" ind1=" " ind2=" ">
+            <marc:subfield code="a">Streaming audio.</marc:subfield>
+        </marc:datafield>
+        <marc:datafield tag="505" ind1="0" ind2=" ">
+            <marc:subfield code="a">Very long formatted contents field</marc:subfield>
+        </marc:datafield>
+        <marc:datafield tag="856" ind1="4" ind2="0">
+            <marc:subfield code="u">http://nypl.naxosmusiclibrary.com/catalogue/item.asp?cid=foobar</marc:subfield>
+        </marc:datafield>
+    </marc:record>       
+</marc:collection>

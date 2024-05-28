@@ -1,0 +1,26 @@
+[tool.poetry]
+name = "naxos-reconcile"
+version = "0.1.0"
+description = ""
+authors = ["Charlotte Kostelic <charlottekostelic@gmail.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.12"
+pandas = "^2.2.2"
+requests = "^2.32.2"
+click = "^8.1.7"
+pymarc = "^5.1.2"
+types-requests = "^2.32.0.20240523"
+pandas-stubs = "^2.2.2.240514"
+
+
+[tool.poetry.group.dev.dependencies]
+rich = "^13.7.1"
+pytest = "^8.2.1"
+pytest-cov = "^5.0.0"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
