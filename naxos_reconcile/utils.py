@@ -1,6 +1,8 @@
 import csv
+import json
 import datetime
 import os
+from bookops_worldcat import WorldcatAccessToken
 
 
 def get_file_length(file: str) -> int:
@@ -42,3 +44,14 @@ def save_csv(outfile: str, row: list) -> None:
             lineterminator="\n",
         )
         out.writerow(row)
+
+
+def get_token(filepath: str) -> WorldcatAccessToken:
+    """get token for worldshare searches"""
+    with open(filepath, "r") as file:
+        data = json.load(file)
+        return WorldcatAccessToken(
+            key=data["key"],
+            secret=data["secret"],
+            scopes=data["scopes"],
+        )

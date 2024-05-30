@@ -1,5 +1,5 @@
 import click
-
+from rich import print
 from naxos_reconcile.prep import (
     combine_naxos_xml,
     naxos_xml_to_marc,
@@ -8,6 +8,12 @@ from naxos_reconcile.prep import (
     edit_naxos_xml,
 )
 from naxos_reconcile.reconcile import compare_files
+from naxos_reconcile.review import (
+    worldcat_check_data,
+    sample_naxos_data,
+    review_worldcat_results,
+)
+from naxos_reconcile.utils import date_directory
 
 
 @click.group()
@@ -44,19 +50,6 @@ def prep_files(sierra_file, naxos_filepath):
         print(f"Prepped csv is in  file is in {naxos_csv}")
     else:
         print("No files provided.")
-
-
-# @cli.command("sample", short_help="Get sample of prepped Naxos csv file")
-# def sample_csv_file():
-#     naxos_df = pd.read_csv(
-#         f"{date_directory()}/naxos-prepped-data.csv",
-#         header=None,
-#         names=["CONTROL_NO", "BIB_ID", "URL", "CID"],
-#         dtype=str,
-#     )
-#     sample = naxos_df.sample(frac=0.2)
-#     print(sample)
-# sample.to_csv(f"{date_directory()}/naxos-sample.csv", index=False, header=False)
 
 
 @click.option("-s", "--sierra", "sierra", help="Sierra .csv file to process")
@@ -123,6 +116,23 @@ def reconcile_files(sierra_file, naxos_filepath):
 
     print("Comparing files")
     compare_files(sierra_file=sierra_csv, naxos_file=naxos_csv)
+
+
+@click.option(
+    "--sample/--nosample",
+    default=False,
+    help="whether to run command on sample of data",
+)
+@cli.command("search")
+def search_worldcat(sample):
+    if sample:
+        infile = sample_naxos_data(f"{date_directory()}/prepped_naxos_data.csv")
+    else:
+        infile = f"{date_directory()}/prepped_naxos_data.csv"
+    print("Checking WorldCat for Naxos Records")
+    worldcat_results = worldcat_check_data(infile)
+    print(f"Results in {worldcat_results}")
+    review_worldcat_results(f"{date_directory()}/worldcat_check_naxos.csv")
 
 
 def main():
