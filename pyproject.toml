@@ -1,7 +1,7 @@
 [tool.poetry]
 name = "naxos-reconcile"
 version = "0.1.0"
-description = ""
+description = "A command line tool to help review and reconcile Naxos records"
 authors = ["Charlotte Kostelic <charlottekostelic@gmail.com>"]
 readme = "README.md"
 

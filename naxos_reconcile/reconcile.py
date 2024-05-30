@@ -57,13 +57,13 @@ def compare_files(sierra_file: str, naxos_file: str):
     sierra_unique.to_csv(
         delete_csv,
         index=False,
+        columns=["OCLC_NUMBER", "BIB_ID", "URL_SIERRA", "CID_SIERRA"],
     )
     print(f"records to delete in {delete_csv}")
 
     # rows only in naxos input file should be imported into sierra
     naxos_unique = unique_df[unique_df["_merge"] == "right_only"]
     naxos_unique.to_csv(
-        import_csv,
-        index=False,
+        import_csv, index=False, columns=["URL_NAXOS", "CONTROL_NO", "CID_NAXOS"]
     )
     print(f"records to import in {import_csv}")
