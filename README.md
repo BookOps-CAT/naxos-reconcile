@@ -1,17 +1,17 @@
-## Naxos Reconciliation
+# Naxos Reconciliation
 
 A command line tool to help review and reconcile Naxos records
 
-### Commands
+## Commands
 
-#### `prep`
+### `prep`
 Process `.xml` files from Naxos and/or `.csv` file from Sierra export
 
-##### Options:
+#### Options:
  - `-s` `--sierra`: path to `.csv` file exported from Sierra
  - `-n` `--naxos`: path to MARC/XML file(s) from Naxos
 
-##### Process:
+#### Process:
 Sierra: 
 1) File is read and rows with more than one URL are be split into multiple rows
 2) Comma separated output file is written to `/data/files/{date}` directory. File contains:
@@ -28,14 +28,14 @@ Naxos:
  - Control Number (from 001 field)
  - CID (from URL)
 
-#### `compare`
+### `compare`
 Compare prepped Naxos and Sierra files
 
-##### Options
+#### Options
  - `-s` `--sierra`: Prepped Sierra data (.csv file) to use in comparison
  - `-n` `--naxos`: Prepped Naxos data (.csv file) to use in comparison 
 
-##### Process:
+#### Process:
 1) Read prepped `.csv` files for Sierra and Naxos into DataFrames
 2) Drop duplicate rows from DataFrames 
 3) Merge dataframes with inner join using "CID" as key. Output results of join to "combined_urls_to_check.csv"
@@ -43,24 +43,24 @@ Compare prepped Naxos and Sierra files
 5) Create dataframe for all resources only present in Sierra data. Export results to "records_to_delete.csv"
 6) Create dataframe for all resources only present in Naxos data. Export results to "records_to_import.csv"
 
-#### `reconcile`
+### `reconcile`
 Prep files from Sierra and Naxos and then compare them
 
-##### Options
+#### Options
  - `-s` `--sierra`: Prepped Sierra data (.csv file) to use in comparison
  - `-n` `--naxos`: Prepped Naxos data (.csv file) to use in comparison 
 
-##### Process:
+#### Process:
 1) Prepares files using process outlined above in `prep`
 2) Compares files using process outlined above in `compare`
 
-#### `check-urls`
+### `check-urls`
 Check URLs for each row in a spreadsheet; data should be prepped first
 
-##### Options
+#### Options
  - `-f` `--file`: file to check
 
 
-#### `sample`
+### `sample`
 Create a sample of data from a spreadsheet
 
