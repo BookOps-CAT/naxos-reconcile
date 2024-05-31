@@ -63,6 +63,9 @@ Check URLs for each row in a spreadsheet; data should be prepped first
 `-f` `--file`: file to check
 
 
-### `naxos sample`
-Create a sample of data from a spreadsheet
+### `naxos search`
+Query WorldCat Metadata API for for Naxos records using data from Naxos MARC/XML
 
+#### Options
+`--sample/--nosample`: whether or not to create a sample of the prepped Naxos data and query just that sample
+`-r`, `--row_number`: row number to start with. Default is 0 but the script can be restarted if it hits an error by including this option.

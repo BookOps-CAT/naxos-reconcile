@@ -7,13 +7,15 @@ from naxos_reconcile.prep import (
     prep_sierra_csv,
     edit_naxos_xml,
 )
-from naxos_reconcile.reconcile import compare_files
+from naxos_reconcile.reconcile import compare_files, compare_naxos_worldcat_sierra
 from naxos_reconcile.review import (
-    worldcat_check_data,
-    sample_naxos_data,
+    get_worldcat_data,
     review_worldcat_results,
 )
-from naxos_reconcile.utils import date_directory
+from naxos_reconcile.utils import (
+    date_directory,
+    sample_data,
+)
 
 
 @click.group()
@@ -63,31 +65,6 @@ def compare_infiles(sierra, naxos):
     )
 
 
-# @click.option("-f", "file", help=".csv file to process")
-# @cli.command("check-urls", short_help="Check status of urls")
-# def check_urls(infile):
-#     print("Checking URLs")
-#     checked = out_file("combined-urls-status.csv")
-#     length = get_file_length(infile)
-#     n = 1
-#     with open(infile, "r", encoding="utf-8") as csvfile:
-#         reader = csv.reader(csvfile, delimiter=",")
-#         for row in reader:
-#             record = NaxosRecord.data_from_csv(row)
-#             save_csv(
-#                 checked,
-#                 [
-#                     record.control_no,
-#                     record.bib_id,
-#                     record.url,
-#                     record.cid,
-#                     record.status,
-#                 ],
-#             )
-#             print(f"({n} of {length}): {record.bib_id, record.url, record.status}")
-#             n += 1
-
-
 @click.option("-s", "--sierra", "sierra_file", help="Sierra .csv file to process")
 @click.option("-n", "--naxos", "naxos_filepath", help="Path to Naxos files to process")
 @cli.command(
@@ -123,16 +100,28 @@ def reconcile_files(sierra_file, naxos_filepath):
     default=False,
     help="whether to run command on sample of data",
 )
+@click.option("-r", "--row_number", default=0, help="row number to start with")
 @cli.command("search")
-def search_worldcat(sample):
-    if sample:
-        infile = sample_naxos_data(f"{date_directory()}/prepped_naxos_data.csv")
-    else:
-        infile = f"{date_directory()}/prepped_naxos_data.csv"
+def search_worldcat(sample, row_number):
     print("Checking WorldCat for Naxos Records")
-    worldcat_results = worldcat_check_data(infile)
-    print(f"Results in {worldcat_results}")
-    review_worldcat_results(f"{date_directory()}/worldcat_check_naxos.csv")
+    if sample:
+        infile = sample_data(
+            infile=f"{date_directory()}/prepped_naxos_data.csv",
+            outfile="naxos_sample_for_worldcat.csv",
+            header=None,
+        )
+        get_worldcat_data(infile, 0)
+    else:
+        get_worldcat_data(f"{date_directory()}/prepped_naxos_data.csv", row_number)
+
+
+@cli.command("review-naxos")
+def review_naxos_data():
+    review_worldcat_results(f"{date_directory()}/naxos_with_worldcat.csv")
+    compare_naxos_worldcat_sierra(
+        matched_file=f"{date_directory()}/combined_urls_to_check.csv",
+        naxos_worldcat_file=f"{date_directory()}/naxos_with_worldcat.csv",
+    )
 
 
 def main():

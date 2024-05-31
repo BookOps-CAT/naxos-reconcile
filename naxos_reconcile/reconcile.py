@@ -1,13 +1,6 @@
-import requests
 import pandas as pd
 
 from naxos_reconcile.utils import out_file
-
-
-def get_url_status(url: str) -> int:
-    """check the URL and return the status code as int"""
-    response = requests.get(url)
-    return response.status_code
 
 
 def compare_files(sierra_file: str, naxos_file: str):
@@ -35,7 +28,7 @@ def compare_files(sierra_file: str, naxos_file: str):
     sierra_df.drop_duplicates(inplace=True)
     naxos_df.drop_duplicates(inplace=True)
 
-    # merge dataframes with an inner join and keep only exact matches
+    # merge dataframes with an inner join and keep only matches
     check_df = sierra_df.merge(naxos_df, left_on="CID_SIERRA", right_on="CID_NAXOS")
     check_df.to_csv(
         check_csv,
@@ -67,3 +60,68 @@ def compare_files(sierra_file: str, naxos_file: str):
         import_csv, index=False, columns=["URL_NAXOS", "CONTROL_NO", "CID_NAXOS"]
     )
     print(f"records to import in {import_csv}")
+
+
+def compare_naxos_worldcat_sierra(matched_file: str, naxos_worldcat_file: str):
+    matched_csv = out_file("worldcat_matched_combined.csv")
+    unmatched_csv = out_file("worldcat_unmatched_combined.csv")
+
+    # read input files into dataframes
+    matched_df = pd.read_csv(
+        matched_file,
+        header=0,
+        names=[
+            "OCLC_NUMBER",
+            "BIB_ID",
+            "URL_SIERRA",
+            "CID_SIERRA",
+            "URL_NAXOS",
+            "CONTROL_NO",
+            "CID_NAXOS",
+        ],
+        dtype=str,
+    )
+    naxos_worldcat_df = pd.read_csv(
+        naxos_worldcat_file,
+        header=None,
+        names=[
+            "URL_NAXOS",
+            "CONTROL_NO",
+            "CID_NAXOS",
+            "NUMBER_OF_RECORDS",
+            "OCLC_NUMBER_NAXOS",
+            "OCLC_SOURCE",
+        ],
+        dtype=str,
+    )
+
+    # drop duplicate rows, just in case
+    matched_df.drop_duplicates(inplace=True)
+    naxos_worldcat_df.drop_duplicates(inplace=True)
+
+    # merge dataframes with an inner join and keep only matches
+    check_df = matched_df.merge(
+        naxos_worldcat_df, left_on="OCLC_NUMBER", right_on="OCLC_NUMBER_NAXOS"
+    )
+    check_df.to_csv(
+        matched_csv,
+        index=False,
+    )
+    print(f"Overlap between matched csv and Naxos worldcat output in {matched_csv}")
+
+    # merge dataframes with an outer join to identify unique rows
+    unmatched_df = matched_df.merge(
+        naxos_worldcat_df,
+        how="outer",
+        indicator=True,
+        left_on="OCLC_NUMBER",
+        right_on="OCLC_NUMBER_NAXOS",
+    )
+
+    # rows only in naxos worldcat input file
+    naxos_mismatch = unmatched_df[unmatched_df["_merge"] == "left_only"]
+    naxos_mismatch.to_csv(
+        unmatched_csv,
+        index=False,
+    )
+    print(f"Naxos records that did not match sierra oclc numbers in {unmatched_csv}")
