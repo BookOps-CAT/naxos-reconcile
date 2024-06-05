@@ -6,16 +6,15 @@ from naxos_reconcile.prep import (
     prep_naxos_csv,
     prep_sierra_csv,
     edit_naxos_xml,
+    prep_csv_sample,
 )
-from naxos_reconcile.reconcile import compare_files, compare_naxos_worldcat_sierra
+from naxos_reconcile.reconcile import compare_files
 from naxos_reconcile.review import (
-    get_worldcat_data,
-    review_worldcat_results,
+    review_results,
+    # review_import_results,
 )
-from naxos_reconcile.utils import (
-    date_directory,
-    sample_data,
-)
+from naxos_reconcile.check import worldcat_brief_bibs, worldcat_missing_records
+from naxos_reconcile.utils import date_directory
 
 
 @click.group()
@@ -32,24 +31,24 @@ def cli():
 def prep_files(sierra_file, naxos_filepath):
     if sierra_file:
         print("Processing Sierra .csv file")
-        sierra_csv = prep_sierra_csv(sierra_file)
+        sierra_prepped_csv = prep_sierra_csv(sierra_file)
         print("Finished processing Sierra file(s)")
-        print(f"Prepped csv file is in {sierra_csv}")
+        print(f"Prepped csv file is in {sierra_prepped_csv}")
     if naxos_filepath:
         print("Processing Naxos XML files")
-        combined_xml = combine_naxos_xml(naxos_filepath)
-        print(f"Combined Naxos .xml file is in {combined_xml}")
-        edited_xml = edit_naxos_xml(combined_xml)
-        print(f"Edited Naxos .xml file is in {edited_xml}")
+        naxos_combined = combine_naxos_xml(naxos_filepath)
+        print(f"Combined Naxos .xml file is in {naxos_combined}")
+        naxos_edited_xml = edit_naxos_xml(naxos_combined)
+        print(f"Edited Naxos .xml file is in {naxos_edited_xml}")
 
         print("Converting Naxos XML file to MARC21")
-        marc_file = naxos_xml_to_marc(edited_xml)
-        print(f"Naxos MARC21 file is in {marc_file}")
+        naxos_edited_marc = naxos_xml_to_marc(naxos_edited_xml)
+        print(f"Naxos MARC21 file is in {naxos_edited_marc}")
 
         print("Converting Naxos XML to csv")
-        naxos_csv = prep_naxos_csv(edited_xml)
+        naxos_prepped_csv = prep_naxos_csv(naxos_edited_xml)
         print("Finished processing Naxos file(s)")
-        print(f"Prepped csv is in  file is in {naxos_csv}")
+        print(f"Prepped csv is in  file is in {naxos_prepped_csv}")
     else:
         print("No files provided.")
 
@@ -72,56 +71,61 @@ def compare_infiles(sierra, naxos):
 )
 def reconcile_files(sierra_file, naxos_filepath):
     print("Processing Sierra .csv file")
-    sierra_csv = prep_sierra_csv(sierra_file)
+    sierra_prepped_csv = prep_sierra_csv(sierra_file)
     print("Finished processing Sierra file(s)")
-    print(f"Prepped csv file is in {sierra_csv}")
+    print(f"Prepped csv file is in {sierra_prepped_csv}")
 
     print("Processing Naxos XML files")
-    combined_xml = combine_naxos_xml(naxos_filepath)
-    print(f"Combined Naxos .xml file is in {combined_xml}")
-    edited_xml = edit_naxos_xml(combined_xml)
-    print(f"Edited Naxos .xml file is in {edited_xml}")
+    naxos_combined = combine_naxos_xml(naxos_filepath)
+    print(f"Combined Naxos .xml file is in {naxos_combined}")
+    naxos_edited_xml = edit_naxos_xml(naxos_combined)
+    print(f"Edited Naxos .xml file is in {naxos_edited_xml}")
 
     print("Converting Naxos XML file to MARC21")
-    marc_file = naxos_xml_to_marc(edited_xml)
-    print(f"Naxos MARC21 file is in {marc_file}")
+    naxos_edited_marc = naxos_xml_to_marc(naxos_edited_xml)
+    print(f"Naxos MARC21 file is in {naxos_edited_marc}")
 
     print("Converting Naxos XML to csv")
-    naxos_csv = prep_naxos_csv(edited_xml)
+    naxos_prepped_csv = prep_naxos_csv(naxos_edited_xml)
     print("Finished processing Naxos file(s)")
-    print(f"Prepped csv is in  file is in {naxos_csv}")
+    print(f"Prepped csv is in  file is in {naxos_prepped_csv}")
 
     print("Comparing files")
-    compare_files(sierra_file=sierra_csv, naxos_file=naxos_csv)
+    compare_files(sierra_file=sierra_prepped_csv, naxos_file=naxos_prepped_csv)
+
+    print("Creating sample file")
+    prep_csv_sample(f"{date_directory()}/records_to_check_urls.csv")
+    print(f"Sample data is in {date_directory()}/sample_records_to_check.csv")
 
 
 @click.option(
     "--sample/--nosample",
-    default=False,
+    default=True,
     help="whether to run command on sample of data",
 )
 @click.option("-r", "--row_number", default=0, help="row number to start with")
-@cli.command("search")
+@cli.command("review-naxos-data")
 def search_worldcat(sample, row_number):
-    print("Checking WorldCat for Naxos Records")
     if sample:
-        infile = sample_data(
-            infile=f"{date_directory()}/prepped_naxos_data.csv",
-            outfile="naxos_sample_for_worldcat.csv",
-            header=None,
-        )
-        get_worldcat_data(infile, 0)
+        print("Checking WorldCat for Naxos Records")
+        csv_input = f"{date_directory()}/sample_records_to_check.csv"
+        worldcat_brief_bibs(csv_input, 0)
     else:
-        get_worldcat_data(f"{date_directory()}/prepped_naxos_data.csv", row_number)
+        print("Checking WorldCat for Naxos Records")
+        worldcat_brief_bibs(f"{date_directory()}/records_to_check.csv", row_number)
+
+    print("Results of brief_bibs_search:")
+    review_results(f"{date_directory()}/naxos_worldcat_brief_bibs.csv")
 
 
-@cli.command("review-naxos")
-def review_naxos_data():
-    review_worldcat_results(f"{date_directory()}/naxos_with_worldcat.csv")
-    compare_naxos_worldcat_sierra(
-        matched_file=f"{date_directory()}/combined_urls_to_check.csv",
-        naxos_worldcat_file=f"{date_directory()}/naxos_with_worldcat.csv",
-    )
+@cli.command("get-import-records")
+def search_import_records():
+    print("Checking WorldCat for Naxos Records")
+    csv_input = f"{date_directory()}/records_to_import.csv"
+    worldcat_missing_records(csv_input, 0)
+
+    # print("Results of brief_bibs_search:")
+    # review_import_results(f"{date_directory()}/naxos_worldcat_records_to_import.csv")
 
 
 def main():

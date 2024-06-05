@@ -9,6 +9,7 @@ from naxos_reconcile.prep import (
     naxos_xml_to_marc,
     prep_naxos_csv,
     prep_sierra_csv,
+    prep_csv_sample,
 )
 
 from naxos_reconcile.utils import out_file
@@ -53,10 +54,18 @@ def test_edit_naxos_xml(test_marc_xml, test_date_directory, mock_date_directory)
             f".//{MARC_NS}datafield[@tag='856']/{MARC_NS}subfield[@code='u']"
         )
     ]
+    marc_505s = [
+        i.text for i in test_root.findall(f".//{MARC_NS}datafield[@tag='505']")
+    ]
+    marc_511s = [
+        i.text for i in test_root.findall(f".//{MARC_NS}datafield[@tag='511']")
+    ]
     assert "edited_naxos.xml" in test_xml
     assert test_root.tag == f"{MARC_NS}collection"
     assert len(marc_urls) == 6
     assert "http://nypl.naxosmusiclibrary.com/catalogue/item.asp?cid=foo" in marc_urls
+    assert len(marc_505s) == 0
+    assert len(marc_511s) == 0
 
 
 def test_naxos_xml_to_marc(test_marc_xml, test_date_directory, mock_date_directory):
@@ -118,3 +127,21 @@ def test_prep_sierra_csv(test_date_directory, mock_date_directory):
         "b218396284",
         "b218396296",
     ]
+
+
+def test_prep_csv_sample(test_date_directory, mock_date_directory):
+    file = "tests/test_csv.csv"
+    writer = csv.writer(open(f"{test_date_directory}/test_combined.csv", "w"))
+    with open(file, "r") as csvfile:
+        n = 0
+        reader = csv.reader(csvfile, delimiter=",")
+        while n < 20:
+            for row in reader:
+                writer.writerow(row)
+    control_nos = []
+    sample = prep_csv_sample(file)
+    with open(sample, "r") as csvfile:
+        reader = csv.reader(csvfile, delimiter=",")
+        for row in reader:
+            control_nos.append(row[1])
+    assert len(control_nos) == 8

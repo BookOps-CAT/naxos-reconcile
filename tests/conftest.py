@@ -73,8 +73,13 @@ def test_marc_xml() -> ET.ElementTree:
         ),
         Field(
             tag="505",
-            indicators=[" ", " "],
+            indicators=["0", "0"],
             subfields=[Subfield(code="a", value="Very long formatted contents field")],
+        ),
+        Field(
+            tag="511",
+            indicators=["0", " "],
+            subfields=[Subfield(code="a", value="Very long list of performers")],
         ),
         Field(
             tag="856",

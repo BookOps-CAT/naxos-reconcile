@@ -1,13 +1,7 @@
 import os
 import pandas as pd
-from naxos_reconcile.reconcile import get_url_status, compare_files
+from naxos_reconcile.reconcile import compare_files
 from naxos_reconcile.utils import out_file
-
-
-def test_get_url_status(mock_200_response):
-    url = "https://foo.bar"
-    status_code = get_url_status(url)
-    assert status_code == 200
 
 
 def test_compare_files(test_date_directory, mock_date_directory):
