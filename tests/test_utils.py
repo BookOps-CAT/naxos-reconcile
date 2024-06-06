@@ -7,7 +7,7 @@ from naxos_reconcile.utils import get_file_length, date_directory, out_file, sav
 
 def test_get_file_length():
     file_length = get_file_length("tests/test_csv.csv")
-    assert file_length == 7
+    assert file_length == 8
 
 
 def test_date_directory():

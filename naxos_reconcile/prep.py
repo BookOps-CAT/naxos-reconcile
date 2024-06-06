@@ -56,7 +56,7 @@ def edit_naxos_xml(file: str) -> str:
     Removes 505 and 511 fields to shorten records and edits url in 856$u.
     Writes records to new file and any records missing 856 fields.
     """
-    edited_xml = out_file("naxos_edited_testing.xml")
+    edited_xml = out_file("naxos_edited.xml")
 
     ET.register_namespace("marc", MARC_URI)
     tree = ET.parse(file)
@@ -200,12 +200,11 @@ def prep_csv_sample(infile: str) -> str:
     with open(infile, "r", encoding="utf-8") as csvfile:
         reader = csv.reader(csvfile, delimiter=",")
         next(reader)
-        # for row in itertools.islice(reader, 0, file_length, 20):
-        for row in itertools.islice(reader, 0, file_length, 100):
+        for row in itertools.islice(reader, 0, file_length, 20):
             save_csv(
                 sample_out,
                 [
-                    row[0].strip("(OCoLC)"),
+                    row[0],
                     row[1],
                     row[2],
                     row[3],

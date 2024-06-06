@@ -39,7 +39,7 @@ def test_compare_files(test_date_directory, mock_date_directory):
     compare_files(sierra_file=out_file("naxos.csv"), naxos_file=out_file("naxos.csv"))
     assert sorted(
         [
-            "combined_urls_to_check.csv",
+            "records_to_check.csv",
             "records_to_delete.csv",
             "records_to_import.csv",
             "sierra.csv",

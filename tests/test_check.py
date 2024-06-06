@@ -1,4 +1,4 @@
-# from naxos_reconcile.review import review_results
+# from naxos_reconcile.check import get_url_status
 
 
 # def test_get_url_status(mock_200_response):

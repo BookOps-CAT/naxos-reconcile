@@ -11,7 +11,6 @@ from naxos_reconcile.prep import (
 from naxos_reconcile.reconcile import compare_files
 from naxos_reconcile.review import (
     review_results,
-    review_import_results,
 )
 from naxos_reconcile.check import worldcat_brief_bibs, worldcat_missing_records
 from naxos_reconcile.utils import date_directory
@@ -137,14 +136,14 @@ def search_worldcat_overlap(overlap_file, import_file, overlap_start, import_sta
     "-o",
     "--overlap",
     "overlap_file",
-    default=f"{date_directory()}/naxos_worldcat_brief_bibs.csv",
+    default=f"{date_directory()}/sample_records_to_check_worldcat_results.csv",
     help="Overlap file to review",
 )
 @click.option(
     "-i",
     "--import_file",
     "import_file",
-    default=f"{date_directory()}/naxos_worldcat_records_to_import.csv",
+    default=f"{date_directory()}/records_to_import_worldcat_results.csv",
     help="Import file to review",
 )
 @cli.command("review")
@@ -152,7 +151,7 @@ def review_data(overlap_file, import_file):
     print("Results of overlap record search:")
     review_results(overlap_file)
     print("Results of import record search:")
-    review_import_results(import_file)
+    review_results(import_file)
 
 
 def main():

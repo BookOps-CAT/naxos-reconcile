@@ -76,8 +76,8 @@ Query WorldCat Metadata API for records which should be imported into Sierra and
 Reviews output of overlap and import record searches and prints review. 
 
 #### Options
-`-o`, `--overlap`: overlap file search results to review. Default is `naxos_worldcat_brief_bibs.csv`
-`-i`, `--import_file`: import file search results to review. Default is `naxos_worldcat_records_to_import.csv`
+`-o`, `--overlap`: overlap file search results to review. Default is `sample_records_to_check_worldcat_results.csv`
+`-i`, `--import_file`: import file search results to review. Default is `records_to_import_worldcat_results.csv`
 
 #### Process
 1) Review results of API queries and url checks for overlap file. Prints a total count and percentage of records with:
