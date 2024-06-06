@@ -1,4 +1,5 @@
 import os
+from typing import Optional, List, Dict
 import requests
 from bookops_worldcat import MetadataSession
 
@@ -9,6 +10,69 @@ from naxos_reconcile.utils import (
     open_csv_file,
     get_file_length,
 )
+
+
+def parse_worldcat_results(data: dict, csv_data: Optional[List] = None) -> Dict:
+    """
+    Parse data returned by WorldCat Metadata API brief_bibs_search query
+    """
+    out_dict = {}
+    if data["numberOfRecords"] == 1:
+        out_dict["oclc_number"] = data["briefRecords"][0]["oclcNumber"]
+        out_dict["record_source"] = data["briefRecords"][0]["catalogingInfo"][
+            "catalogingAgency"
+        ]
+        out_dict["all_oclc_numbers"] = out_dict["oclc_number"]
+    elif data["numberOfRecords"] == 0:
+        out_dict["oclc_number"] = None
+        out_dict["record_source"] = None
+        out_dict["all_oclc_numbers"] = None
+    elif data["numberOfRecords"] > 1:
+        out_dict["all_oclc_numbers"] = [i["oclcNumber"] for i in data["briefRecords"]]
+        bibs = data["briefRecords"]
+        naxos_bibs = [
+            i for i in bibs if i["catalogingInfo"]["catalogingAgency"] == "NAXOS"
+        ]
+        other_bibs = [
+            i for i in bibs if i["catalogingInfo"]["catalogingAgency"] != "NAXOS"
+        ]
+        if csv_data:
+            if csv_data[0] in out_dict["all_oclc_numbers"]:
+                out_dict["oclc_number"] = [
+                    i["oclcNumber"] for i in bibs if i["oclcNumber"] == csv_data[0]
+                ][0]
+                out_dict["record_source"] = [
+                    i["catalogingInfo"]["catalogingAgency"]
+                    for i in bibs
+                    if i["oclcNumber"] == csv_data[0]
+                ][0]
+        elif len(naxos_bibs) == 1:
+            out_dict["oclc_number"] = naxos_bibs[0]["oclcNumber"]
+            out_dict["record_source"] = naxos_bibs[0]["catalogingInfo"][
+                "catalogingAgency"
+            ]
+        elif len(naxos_bibs) == 0 and len(other_bibs) == 1:
+            out_dict["oclc_number"] = other_bibs[0]["oclcNumber"]
+            out_dict["record_source"] = other_bibs[0]["catalogingInfo"][
+                "catalogingAgency"
+            ]
+        elif len(naxos_bibs) > 1:
+            out_dict["oclc_number"] = [i["oclcNumber"] for i in naxos_bibs]
+            out_dict["record_source"] = [
+                i["catalogingInfo"]["catalogingAgency"] for i in naxos_bibs
+            ]
+        else:
+            out_dict["oclc_number"] = [i["oclcNumber"] for i in other_bibs]
+            out_dict["record_source"] = [
+                i["catalogingInfo"]["catalogingAgency"] for i in other_bibs
+            ]
+    else:
+        out_dict["oclc_number"] = [i["oclcNumber"] for i in other_bibs]
+        out_dict["record_source"] = [
+            i["catalogingInfo"]["catalogingAgency"] for i in other_bibs
+        ]
+        out_dict["all_oclc_numbers"] = out_dict["oclc_number"]
+    return out_dict
 
 
 def worldcat_missing_records(infile: str, first_row: int) -> None:
@@ -28,62 +92,8 @@ def worldcat_missing_records(infile: str, first_row: int) -> None:
                 itemSubType="music-digital",
             )
             naxos_json = naxos_search.json()
-            if naxos_json["numberOfRecords"] == 1:
-                oclc_number = naxos_json["briefRecords"][0]["oclcNumber"]
-                record_source = naxos_json["briefRecords"][0]["catalogingInfo"][
-                    "catalogingAgency"
-                ]
-                all_oclc_numbers = oclc_number
-            elif naxos_json["numberOfRecords"] == 0:
-                oclc_number = None
-                record_source = None
-                all_oclc_numbers = None
-            else:
-                all_oclc_numbers = [i["oclcNumber"] for i in naxos_json["briefRecords"]]
-                bibs = naxos_json["briefRecords"]
-                naxos_bibs = [
-                    i
-                    for i in bibs
-                    if i["catalogingInfo"]["catalogingAgency"] == "NAXOS"
-                ]
-                other_bibs = [
-                    i
-                    for i in bibs
-                    if i["catalogingInfo"]["catalogingAgency"] != "NAXOS"
-                ]
-                if row[0] in all_oclc_numbers:
-                    oclc_number = [
-                        i["oclcNumber"] for i in bibs if i["oclcNumber"] == row[0]
-                    ][0]
-                    record_source = [
-                        i["catalogingInfo"]["catalogingAgency"]
-                        for i in bibs
-                        if i["oclcNumber"] == row[0]
-                    ][0]
-                elif len(naxos_bibs) == 1:
-                    oclc_number = naxos_bibs[0]["oclcNumber"]
-                    record_source = naxos_bibs[0]["catalogingInfo"]["catalogingAgency"]
-                elif len(naxos_bibs) == 0 and len(other_bibs) == 1:
-                    oclc_number = other_bibs[0]["oclcNumber"]
-                    record_source = other_bibs[0]["catalogingInfo"]["catalogingAgency"]
-                elif len(naxos_bibs) > 1:
-                    oclc_number = [i["oclcNumber"] for i in naxos_bibs]
-                    record_source = [
-                        i["catalogingInfo"]["catalogingAgency"] for i in naxos_bibs
-                    ]
-                else:
-                    oclc_number = [i["oclcNumber"] for i in other_bibs]
-                    record_source = [
-                        i["catalogingInfo"]["catalogingAgency"] for i in other_bibs
-                    ]
-        # url_status = get_url_status(row[0])
-        if naxos_json["numberOfRecords"] >= 1:
-            record_avail = True
-        else:
-            record_avail = False
-        print(
-            f"Record {n} of {file_length}: {row[2]}. Record available: {record_avail}"
-        )
+            parsed_data = parse_worldcat_results(naxos_json)
+        url_status = get_url_status(row[0])
         save_csv(
             outfile,
             [
@@ -91,10 +101,10 @@ def worldcat_missing_records(infile: str, first_row: int) -> None:
                 row[1],
                 row[2],
                 naxos_json["numberOfRecords"],
-                oclc_number,
-                record_source,
-                all_oclc_numbers,
-                # url_status,
+                parsed_data["oclc_number"],
+                parsed_data["record_source"],
+                parsed_data["all_oclc_numbers"],
+                url_status,
             ],
         )
         n += 1
@@ -116,91 +126,26 @@ def worldcat_brief_bibs(infile: str, first_row: int) -> None:
                 q=f"mn='{row[2]}'",
                 itemSubType="music-digital",
             )
+            url_status = get_url_status(row[3])
             naxos_json = naxos_search.json()
-            if naxos_json["numberOfRecords"] == 1:
-                oclc_number = naxos_json["briefRecords"][0]["oclcNumber"]
-                record_source = naxos_json["briefRecords"][0]["catalogingInfo"][
-                    "catalogingAgency"
-                ]
-                all_oclc_numbers = oclc_number
-            elif naxos_json["numberOfRecords"] == 0:
-                oclc_number = None
-                record_source = None
-                all_oclc_numbers = None
-            else:
-                all_oclc_numbers = [i["oclcNumber"] for i in naxos_json["briefRecords"]]
-                bibs = naxos_json["briefRecords"]
-                naxos_bibs = [
-                    i
-                    for i in bibs
-                    if i["catalogingInfo"]["catalogingAgency"] == "NAXOS"
-                ]
-                other_bibs = [
-                    i
-                    for i in bibs
-                    if i["catalogingInfo"]["catalogingAgency"] != "NAXOS"
-                ]
-                if row[0] in all_oclc_numbers:
-                    oclc_number = [
-                        i["oclcNumber"] for i in bibs if i["oclcNumber"] == row[0]
-                    ][0]
-                    record_source = [
-                        i["catalogingInfo"]["catalogingAgency"]
-                        for i in bibs
-                        if i["oclcNumber"] == row[0]
-                    ][0]
-                elif len(naxos_bibs) == 1:
-                    oclc_number = naxos_bibs[0]["oclcNumber"]
-                    record_source = naxos_bibs[0]["catalogingInfo"]["catalogingAgency"]
-                elif len(naxos_bibs) == 0 and len(other_bibs) == 1:
-                    oclc_number = other_bibs[0]["oclcNumber"]
-                    record_source = other_bibs[0]["catalogingInfo"]["catalogingAgency"]
-                elif len(naxos_bibs) > 1:
-                    oclc_number = [i["oclcNumber"] for i in naxos_bibs]
-                    record_source = [
-                        i["catalogingInfo"]["catalogingAgency"] for i in naxos_bibs
-                    ]
-                else:
-                    oclc_number = [i["oclcNumber"] for i in other_bibs]
-                    record_source = [
-                        i["catalogingInfo"]["catalogingAgency"] for i in other_bibs
-                    ]
-        # url_status = get_url_status(row[3])
-        if oclc_number == row[0]:
-            best_match = True
-            other_match = False
-        elif not all_oclc_numbers and not oclc_number:
-            best_match = False
-            other_match = False
-        elif oclc_number != row[0] and row[0] in all_oclc_numbers:
-            best_match = False
-            other_match = True
-        else:
-            best_match = False
-            other_match = False
-
-        save_csv(
-            outfile,
-            [
-                row[0],
-                row[1],
-                row[2],
-                row[3],
-                row[4],
-                naxos_json["numberOfRecords"],
-                oclc_number,
-                record_source,
-                all_oclc_numbers,
-                best_match,
-                other_match,
-                # url_status,
-            ],
-        )
+            if naxos_json:
+                parsed_data = parse_worldcat_results(naxos_json, row)
+                save_csv(
+                    outfile,
+                    [
+                        row[0],
+                        row[1],
+                        row[2],
+                        row[3],
+                        row[4],
+                        naxos_json["numberOfRecords"],
+                        parsed_data["oclc_number"],
+                        parsed_data["record_source"],
+                        parsed_data["all_oclc_numbers"],
+                        url_status,
+                    ],
+                )
         n += 1
-
-    # print(
-    #     f"Dead links: {dead_links.shape[0]} of {df.shape[0]}, {(int(dead_links.shape[0]) / int(df.shape[0])) * 100}%"  # noqa: E501
-    # )
 
 
 def get_url_status(url: str) -> int:

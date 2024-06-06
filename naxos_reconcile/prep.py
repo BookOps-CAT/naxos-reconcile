@@ -200,7 +200,8 @@ def prep_csv_sample(infile: str) -> str:
     with open(infile, "r", encoding="utf-8") as csvfile:
         reader = csv.reader(csvfile, delimiter=",")
         next(reader)
-        for row in itertools.islice(reader, 0, file_length, 20):
+        # for row in itertools.islice(reader, 0, file_length, 20):
+        for row in itertools.islice(reader, 0, file_length, 100):
             save_csv(
                 sample_out,
                 [

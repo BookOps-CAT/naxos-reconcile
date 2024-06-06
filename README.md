@@ -21,12 +21,13 @@ Sierra:
     - Bib ID
     - URL
     - CID (unique ID from Naxos URL)
+
 Naxos:
 1) File(s) in the given directory are be read and combined into a single XML file (`naxos_combined.xml`)
-2) The combined `.xml` file is edited to remove all 505 and 511 fields (to create a record with a valid record length) and replace strings in URLs ("https://univportal.naxosmusiclibrary.com" is replaced with "https://nypl.naxosmusiclibrary.com" in 856$u). Edited records are written to `naxos_edited.xml`.
+2) The combined `.xml` file is edited to remove all 505 and 511 fields (to create a record that can be read with `pymarc`) and replace strings in URLs ("https://univportal.naxosmusiclibrary.com" is replaced with "https://nypl.naxosmusiclibrary.com" in 856$u). Edited records are written to `naxos_edited.xml`.
 3) The edited `.xml` file is converted to MARC21 and written to `naxos_edited.mrc`.
 4) The edited `.xml` file is read and data is output to a `naxos_prepped.csv` file containing:
-    - URL,
+    - URL
     - Control Number (from 001 field)
     - CID (from URL)
 
@@ -40,10 +41,10 @@ Compare prepped Naxos and Sierra files
 #### Process:
 1) Read prepped `.csv` files for Sierra and Naxos into DataFrames
 2) Drop duplicate rows from DataFrames 
-3) Merge dataframes with inner join using "CID" as key. Output results of join to `records_to_check_urls.csv`
-4) Merge dataframes with outer join using "CID" as key.
-5) Create dataframe for all resources only present in Sierra data. Export results to `records_to_delete.csv`
-6) Create dataframe for all resources only present in Naxos data. Export results to `records_to_import.csv`
+3) Merge dataframes with inner join using "CID" as key. Output results of join to `records_to_check.csv`
+4) Merge dataframes with outer join using "CID" as key
+5) Using data from outer join, create dataframe for all resources only present in Sierra data. Export results to `records_to_delete.csv`
+6) Using data from outer join, create dataframe for all resources only present in Naxos data. Export results to `records_to_import.csv`
 
 ### `naxos reconcile`
 Prep files from Sierra and Naxos and then compare them
@@ -55,15 +56,34 @@ Prep files from Sierra and Naxos and then compare them
 #### Process:
 1) Prepares files using process outlined above in `prep`
 2) Compares files using process outlined above in `compare`
-3) Creates a `sample_records_to_check.csv` with 5% of the records from `records_to_check_urls.csv`.
+3) Creates a sample file (`sample_records_to_check.csv`) with 5% of the records from `records_to_check.csv`.
 
 
-### `naxos review-naxos-data`
-Query WorldCat Metadata API for Naxos records using data from overlap of Naxos MARC/XML and Sierra export
+### `naxos search`
+Query WorldCat Metadata API for records which should be imported into Sierra and overlap records. 
 
 #### Options
-`--sample/--nosample`: whether or not to create a sample of the prepped Naxos data and query just that sample. Default is True.
-`-r`, `--row_number`: row number to start with. Default is 0 but the script can be restarted if it hits an error by including this option.
+`-o`, `--overlap`: overlap file to use in WorldCat queries. Default is `sample_records_to_check.csv`
+`-i`, `--import_file`: import file to use in WorldCat queries. Default is `records_to_import.csv`
+`--overlap-start`: Row to start overlap search on. Default is 0.
+`--import-start`: Row to start import search on. Default is 0.
 
-### `naxos get-import-records`
-Query WorldCat Metadata API for records from Naxos MARC/XML that are missing in Sierra
+#### Process
+1) Queries WorldCat Metadata API for brief bibs in overlap file using the CID and the /brief-bibs/search/ endpoint. Starts search from row specified with `--overlap-start`.
+2) Queries WorldCat Metadata API for brief bibs in import file using the CID and the /brief-bibs/search/ endpoint. Starts search from row specified with `--import-start`.
+
+### `naxos review`
+Reviews output of overlap and import record searches and prints review. 
+
+#### Options
+`-o`, `--overlap`: overlap file search results to review. Default is `naxos_worldcat_brief_bibs.csv`
+`-i`, `--import_file`: import file search results to review. Default is `naxos_worldcat_records_to_import.csv`
+
+#### Process
+1) Review results of API queries and url checks for overlap file. Prints a total count and percentage of records with:
+    - At least one match on CID in OCLC
+    - Match on CID to same OCLC record in Sierra
+    - Dead link in record
+2) Review results of API queries and url checks for import file. Prints a total count and percentage of records with:
+    - At least one match on CID in OCLC
+    - Dead link in record

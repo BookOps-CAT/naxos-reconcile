@@ -6,7 +6,7 @@ from naxos_reconcile.utils import out_file
 def compare_files(sierra_file: str, naxos_file: str):
     """compare prepped files"""
     # create output files
-    check_csv = out_file("records_to_check_urls.csv")
+    check_csv = out_file("records_to_check.csv")
     delete_csv = out_file("records_to_delete.csv")
     import_csv = out_file("records_to_import.csv")
 

@@ -11,7 +11,7 @@ from naxos_reconcile.prep import (
 from naxos_reconcile.reconcile import compare_files
 from naxos_reconcile.review import (
     review_results,
-    # review_import_results,
+    review_import_results,
 )
 from naxos_reconcile.check import worldcat_brief_bibs, worldcat_missing_records
 from naxos_reconcile.utils import date_directory
@@ -53,14 +53,14 @@ def prep_files(sierra_file, naxos_filepath):
         print("No files provided.")
 
 
-@click.option("-s", "--sierra", "sierra", help="Sierra .csv file to process")
-@click.option("-n", "--naxos", "naxos", help="Path to Naxos files to process")
+@click.option("-s", "--sierra", "sierra_file", help="Sierra .csv file to process")
+@click.option("-n", "--naxos", "naxos_filepath", help="Path to Naxos files to process")
 @cli.command("compare", short_help="Compare prepped Sierra and Naxos files")
-def compare_infiles(sierra, naxos):
+def compare_infiles(sierra_file, naxos_filepath):
     print("Comparing files")
     compare_files(
-        sierra_file=sierra,
-        naxos_file=naxos,
+        sierra_file=sierra_file,
+        naxos_file=naxos_filepath,
     )
 
 
@@ -94,38 +94,65 @@ def reconcile_files(sierra_file, naxos_filepath):
     compare_files(sierra_file=sierra_prepped_csv, naxos_file=naxos_prepped_csv)
 
     print("Creating sample file")
-    prep_csv_sample(f"{date_directory()}/records_to_check_urls.csv")
+    prep_csv_sample(f"{date_directory()}/records_to_check.csv")
     print(f"Sample data is in {date_directory()}/sample_records_to_check.csv")
 
 
 @click.option(
-    "--sample/--nosample",
-    default=True,
-    help="whether to run command on sample of data",
+    "-o",
+    "--overlap",
+    "overlap_file",
+    default=f"{date_directory()}/sample_records_to_check.csv",
+    help="Overlap file to review",
 )
-@click.option("-r", "--row_number", default=0, help="row number to start with")
-@cli.command("review-naxos-data")
-def search_worldcat(sample, row_number):
-    if sample:
-        print("Checking WorldCat for Naxos Records")
-        csv_input = f"{date_directory()}/sample_records_to_check.csv"
-        worldcat_brief_bibs(csv_input, 0)
-    else:
-        print("Checking WorldCat for Naxos Records")
-        worldcat_brief_bibs(f"{date_directory()}/records_to_check.csv", row_number)
+@click.option(
+    "-i",
+    "--import_file",
+    "import_file",
+    default=f"{date_directory()}/records_to_import.csv",
+    help="Import file to review",
+)
+@click.option(
+    "--overlap-start",
+    "overlap_start",
+    default=0,
+    help="row number to start overlap search with",
+)
+@click.option(
+    "--import-start",
+    "import_start",
+    default=0,
+    help="row number to start import search with",
+)
+@cli.command("search")
+def search_worldcat_overlap(overlap_file, import_file, overlap_start, import_start):
+    print("Checking WorldCat for overlap records")
+    worldcat_brief_bibs(overlap_file, overlap_start)
 
-    print("Results of brief_bibs_search:")
-    review_results(f"{date_directory()}/naxos_worldcat_brief_bibs.csv")
+    print("Checking WorldCat for records to import")
+    worldcat_missing_records(import_file, import_start)
 
 
-@cli.command("get-import-records")
-def search_import_records():
-    print("Checking WorldCat for Naxos Records")
-    csv_input = f"{date_directory()}/records_to_import.csv"
-    worldcat_missing_records(csv_input, 0)
-
-    # print("Results of brief_bibs_search:")
-    # review_import_results(f"{date_directory()}/naxos_worldcat_records_to_import.csv")
+@click.option(
+    "-o",
+    "--overlap",
+    "overlap_file",
+    default=f"{date_directory()}/naxos_worldcat_brief_bibs.csv",
+    help="Overlap file to review",
+)
+@click.option(
+    "-i",
+    "--import_file",
+    "import_file",
+    default=f"{date_directory()}/naxos_worldcat_records_to_import.csv",
+    help="Import file to review",
+)
+@cli.command("review")
+def review_data(overlap_file, import_file):
+    print("Results of overlap record search:")
+    review_results(overlap_file)
+    print("Results of import record search:")
+    review_import_results(import_file)
 
 
 def main():
