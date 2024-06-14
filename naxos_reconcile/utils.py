@@ -3,6 +3,7 @@ import json
 import datetime
 import itertools
 import os
+from typing import Generator
 from bookops_worldcat import WorldcatAccessToken
 
 
@@ -18,13 +19,11 @@ def get_file_length(file: str) -> int:
         file: path to location of csv file
 
     Returns:
-        length of csv file as integer
+        length of csv file as int
     """
-    rows = []
-    with open(file, "r") as infile:
-        for row in infile:
-            rows.append(row)
-    return len(rows)
+    with open(file, "r", encoding="utf-8") as infile:
+        row_count = sum(1 for row in infile)
+    return row_count
 
 
 def date_directory() -> str:
@@ -34,14 +33,14 @@ def date_directory() -> str:
 
 
 def out_file(file: str) -> str:
-    """create file for output"""
+    """create file for output in today's file director"""
     if not os.path.exists(date_directory()):
         os.makedirs(date_directory())
     return f"{date_directory()}/{file}"
 
 
 def save_csv(outfile: str, row: list) -> None:
-    """save output to a csv"""
+    """save row of output to a csv"""
     with open(outfile, "a", encoding="utf-8") as csvfile:
         out = csv.writer(
             csvfile,
@@ -52,7 +51,7 @@ def save_csv(outfile: str, row: list) -> None:
 
 
 def get_token(filepath: str) -> WorldcatAccessToken:
-    """get token for worldshare searches"""
+    """get token for worldcat searches"""
     with open(filepath, "r") as file:
         data = json.load(file)
         return WorldcatAccessToken(
@@ -62,9 +61,9 @@ def get_token(filepath: str) -> WorldcatAccessToken:
         )
 
 
-def open_csv_file(file: str, skip_rows: int):
-    """"""
-    with open(file, "r") as csv_file:
+def open_csv_file(file: str, last_row: int) -> Generator:
+    """open a csv file to and yield the next row"""
+    with open(file, "r", encoding="utf-8") as csv_file:
         reader = csv.reader(csv_file, delimiter=",")
-        for row in itertools.islice(reader, skip_rows, None):
+        for row in itertools.islice(reader, last_row, None):
             yield row

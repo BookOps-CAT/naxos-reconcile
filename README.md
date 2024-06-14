@@ -28,8 +28,11 @@ Naxos:
 3) The edited `.xml` file is converted to MARC21 and written to `naxos_edited.mrc`.
 4) The edited `.xml` file is read and data is output to a `naxos_prepped.csv` file containing:
     - URL
-    - Control Number (from 001 field)
     - CID (from URL)
+    - Title
+    - Publisher
+    - Series title
+
 
 ### `naxos compare`
 Compare prepped Naxos and Sierra files
@@ -46,6 +49,7 @@ Compare prepped Naxos and Sierra files
 5) Using data from outer join, create dataframe for all resources only present in Sierra data. Export results to `records_to_delete.csv`
 6) Using data from outer join, create dataframe for all resources only present in Naxos data. Export results to `records_to_import.csv`
 
+
 ### `naxos reconcile`
 Prep files from Sierra and Naxos and then compare them
 
@@ -56,21 +60,31 @@ Prep files from Sierra and Naxos and then compare them
 #### Process:
 1) Prepares files using process outlined above in `prep`
 2) Compares files using process outlined above in `compare`
-3) Creates a sample file (`sample_records_to_check.csv`) with 5% of the records from `records_to_check.csv`.
+3) Creates sample files `sample_records_to_import.csv` with 5% of the records from `records_to_check.csv` and `records_to_import.csv`.
 
 
 ### `naxos search`
-Query WorldCat Metadata API for records which should be imported into Sierra and overlap records. 
+Use data from prepped `.csv` files to query WorldCat Metadata API and check if the URL from the record is live. 
 
 #### Options
-`-o`, `--overlap`: overlap file to use in WorldCat queries. Default is `sample_records_to_check.csv`
-`-i`, `--import_file`: import file to use in WorldCat queries. Default is `records_to_import.csv`
-`--overlap-start`: Row to start overlap search on. Default is 0.
-`--import-start`: Row to start import search on. Default is 0.
+`-f`, `--file`: File to get WorldCat results for.
+`-r`, `--row`: The last row that was checked/the row to start the search on. Default is 0. To restart a timed-out search, enter the last completed row.
 
 #### Process
-1) Queries WorldCat Metadata API for brief bibs in overlap file using the CID and the /brief-bibs/search/ endpoint. Starts search from row specified with `--overlap-start`.
-2) Queries WorldCat Metadata API for brief bibs in import file using the CID and the /brief-bibs/search/ endpoint. Starts search from row specified with `--import-start`.
+1) Queries WorldCat Metadata API for brief bibs using the CID and the /brief-bibs/search/ endpoint. Starts search after row number provided with `--row` arg.
+2) Checks if URL is live. Possible URL statuses:
+    - Dead: URL check resulted in 404 error from Naxos website
+    - Unavailable: Naxos website lists that item is restricted within US due to copyright 
+    - Live: item is still accessible and playable online
+    - Blocked: Naxos blocked access when the URL was crawled the URl should be rechecked
+    - Unknown: An unknown issue arose during URL check
+3) The results of the query will be output to `.csv` file with:
+    - rows from input `.csv`, 
+    - number of records returned by Metadata API 
+    - oclc number(s)
+    - cataloging agency (for records from oclc number)
+    - status of URL
+
 
 ### `naxos review`
 Reviews output of overlap and import record searches and prints review. 

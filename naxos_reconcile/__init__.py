@@ -7,13 +7,10 @@ from naxos_reconcile.prep import (
     prep_sierra_csv,
     edit_naxos_xml,
     prep_csv_sample,
+    compare_files,
 )
-from naxos_reconcile.reconcile import compare_files
-from naxos_reconcile.review import (
-    review_results,
-)
-from naxos_reconcile.check import worldcat_brief_bibs, worldcat_missing_records
-from naxos_reconcile.utils import date_directory
+from naxos_reconcile.review import review_all_results
+from naxos_reconcile.check import search_oclc_check_urls
 
 
 @click.group()
@@ -27,7 +24,7 @@ def cli():
 @click.option("-s", "--sierra", "sierra_file", help="Sierra .csv file to process")
 @click.option("-n", "--naxos", "naxos_filepath", help="Path to Naxos files to process")
 @cli.command("prep", short_help="Prep Sierra and/or Naxos file(s)")
-def prep_files(sierra_file, naxos_filepath):
+def prep_files(sierra_file: str, naxos_filepath: str) -> None:
     if sierra_file:
         print("Processing Sierra .csv file")
         sierra_prepped_csv = prep_sierra_csv(sierra_file)
@@ -55,7 +52,7 @@ def prep_files(sierra_file, naxos_filepath):
 @click.option("-s", "--sierra", "sierra_file", help="Sierra .csv file to process")
 @click.option("-n", "--naxos", "naxos_filepath", help="Path to Naxos files to process")
 @cli.command("compare", short_help="Compare prepped Sierra and Naxos files")
-def compare_infiles(sierra_file, naxos_filepath):
+def compare_infiles(sierra_file: str, naxos_filepath: str) -> None:
     print("Comparing files")
     compare_files(
         sierra_file=sierra_file,
@@ -68,7 +65,7 @@ def compare_infiles(sierra_file, naxos_filepath):
 @cli.command(
     "reconcile", short_help="Process Sierra and Naxos files and then compare them"
 )
-def reconcile_files(sierra_file, naxos_filepath):
+def reconcile_files(sierra_file: str, naxos_filepath: str) -> None:
     print("Processing Sierra .csv file")
     sierra_prepped_csv = prep_sierra_csv(sierra_file)
     print("Finished processing Sierra file(s)")
@@ -92,66 +89,42 @@ def reconcile_files(sierra_file, naxos_filepath):
     print("Comparing files")
     compare_files(sierra_file=sierra_prepped_csv, naxos_file=naxos_prepped_csv)
 
-    print("Creating sample file")
-    prep_csv_sample(f"{date_directory()}/records_to_check.csv")
-    print(f"Sample data is in {date_directory()}/sample_records_to_check.csv")
+    print("Creating sample files")
+    prep_csv_sample("records_to_check.csv")
+    prep_csv_sample("records_to_import.csv")
+    print("Finished prepping files")
 
 
 @click.option(
-    "-o",
-    "--overlap",
-    "overlap_file",
-    default=f"{date_directory()}/sample_records_to_check.csv",
-    help="Overlap file to review",
+    "-f",
+    "--file",
+    "file",
+    help="File to review",
 )
 @click.option(
-    "-i",
-    "--import_file",
-    "import_file",
-    default=f"{date_directory()}/records_to_import.csv",
-    help="Import file to review",
-)
-@click.option(
-    "--overlap-start",
-    "overlap_start",
+    "-r",
+    "--row",
+    "row",
     default=0,
-    help="row number to start overlap search with",
+    help="Last row checked",
 )
-@click.option(
-    "--import-start",
-    "import_start",
-    default=0,
-    help="row number to start import search with",
-)
-@cli.command("search")
-def search_worldcat_overlap(overlap_file, import_file, overlap_start, import_start):
-    print("Checking WorldCat for overlap records")
-    worldcat_brief_bibs(overlap_file, overlap_start)
-
-    print("Checking WorldCat for records to import")
-    worldcat_missing_records(import_file, import_start)
+@cli.command("search", short_help="Search for records in WorldCat")
+def search_worldcat(file: str, row: int) -> None:
+    print(f"Searching WorldCat for records for {file}")
+    results_file = search_oclc_check_urls(infile=file, last_row=row)
+    print(f"Results in {results_file}")
 
 
 @click.option(
-    "-o",
-    "--overlap",
-    "overlap_file",
-    default=f"{date_directory()}/sample_records_to_check_worldcat_results.csv",
-    help="Overlap file to review",
+    "-d",
+    "--date",
+    "date",
+    help="Date directory to check (in YYYY-MM-DD format)",
 )
-@click.option(
-    "-i",
-    "--import_file",
-    "import_file",
-    default=f"{date_directory()}/records_to_import_worldcat_results.csv",
-    help="Import file to review",
-)
-@cli.command("review")
-def review_data(overlap_file, import_file):
-    print("Results of overlap record search:")
-    review_results(overlap_file)
-    print("Results of import record search:")
-    review_results(import_file)
+@cli.command("review", short_help="Review output of WorldCat searches and URL checks")
+def review_data(date):
+    print("Results of WorldCat Searches and URL checks:")
+    review_all_results(date)
 
 
 def main():

@@ -1,11 +1,12 @@
 import os
 import csv
-import itertools
+import random
 import xml.etree.ElementTree as ET
 
+import pandas as pd
 from pymarc import MARCWriter, parse_xml_to_array
 
-from naxos_reconcile.utils import out_file, save_csv, get_file_length
+from naxos_reconcile.utils import out_file, save_csv, get_file_length, date_directory
 
 MARC_URI = "http://www.loc.gov/MARC21/slim"
 MARC_NS = "{http://www.loc.gov/MARC21/slim}"
@@ -13,18 +14,15 @@ MARC_NS = "{http://www.loc.gov/MARC21/slim}"
 
 def combine_naxos_xml(dir: str) -> str:
     """
-    Reads Naxos MARC/XML files from Naxos and combines them into a single file.
-    Removes 505 fields from records to make records shorter for pymarc.
+    Reads MARC/XML files from Naxos and combines them into a single .xml file.
 
     Args:
+        file: path to MARC/XML files to process
 
-        file: file path for MARCXML files to process
     Returns:
-
-        name of processed .xml file as str
-
+        name of combined .xml file as str
     """
-    combined_xml = out_file("naxos_combined.xml")
+    combined_xml = out_file("naxos_marc_combined.xml")
 
     ET.register_namespace("marc", MARC_URI)
     ET.register_namespace("xsi", "http://www.w3.org/2001/XMLSchema-instance")
@@ -52,11 +50,17 @@ def combine_naxos_xml(dir: str) -> str:
 
 def edit_naxos_xml(file: str) -> str:
     """
-    Reads combined MARC/XML file and edits fields.
-    Removes 505 and 511 fields to shorten records and edits url in 856$u.
-    Writes records to new file and any records missing 856 fields.
+    Reads combined MARC/XML file and edits file. Removes 505 and 511
+    fields to shorten records and edits url in 856$u. Writes edited
+    records to new .xml file.
+
+    Args:
+        file: path to combined MARCXML file to edit
+
+    Returns:
+        name of edited .xml file as str
     """
-    edited_xml = out_file("naxos_edited.xml")
+    edited_xml = out_file("naxos_marc_edited.xml")
 
     ET.register_namespace("marc", MARC_URI)
     tree = ET.parse(file)
@@ -89,16 +93,15 @@ def edit_naxos_xml(file: str) -> str:
 
 def naxos_xml_to_marc(file: str) -> str:
     """
-    Reads Naxos MARC/XML file and converts it to MARC21.
+    Reads combined, edited Naxos MARC/XML file and writes it to MARC21.
 
     Args:
+        file: path to MARCXML file to process
 
-        file: file path for MARCXML file to process
     Returns:
-
-        name of processed .mrc file as str
+        name of .mrc file as str
     """
-    naxos_marc_processed = out_file("naxos_edited.mrc")
+    naxos_marc_processed = out_file("naxos_marc_edited.mrc")
     records = parse_xml_to_array(open(file, "rb"))
     writer = MARCWriter(open(naxos_marc_processed, "wb"))
     for record in records:
@@ -108,13 +111,44 @@ def naxos_xml_to_marc(file: str) -> str:
 
 
 def prep_naxos_csv(file: str) -> str:
-    naxos_csv = out_file("naxos_prepped.csv")
+    """
+    Reads naxos edited .xml and outputs data to .csv. Output contains:
+    - URL
+    - CID
+    - Title
+    - Publisher (from 260$b)
+    - Series
 
+    Args:
+        file: path to MARCXML file to process
+
+    Returns:
+        name of .csv file as str
+    """
+    naxos_csv = out_file("prepped_naxos_input.csv")
     tree = ET.parse(file)
     root = tree.getroot()
     for record in root.findall(f"./{MARC_NS}record"):
         control_no = [
             i.text for i in record.findall(f"./{MARC_NS}controlfield[@tag='001']")
+        ]
+        title = [
+            i.text
+            for i in record.findall(
+                f"./{MARC_NS}datafield[@tag='245']/{MARC_NS}subfield[@code='a']"
+            )
+        ]
+        publisher = [
+            i.text
+            for i in record.findall(
+                f"./{MARC_NS}datafield[@tag='260']/{MARC_NS}subfield[@code='b']"
+            )
+        ]
+        series = [
+            i.text
+            for i in record.findall(
+                f"./{MARC_NS}datafield[@tag='490']/{MARC_NS}subfield[@code='a']"
+            )
         ]
         urls = [
             i.text
@@ -129,8 +163,10 @@ def prep_naxos_csv(file: str) -> str:
                     naxos_csv,
                     [
                         url,
-                        control_no[0],
                         str(url.split("?cid=")[1].strip()),
+                        title[0],
+                        publisher[0],
+                        series[0],
                     ],
                 )
     return naxos_csv
@@ -139,19 +175,18 @@ def prep_naxos_csv(file: str) -> str:
 def prep_sierra_csv(infile: str) -> str:
     """
     Reads a csv file and splits rows with multiple urls into separate rows.
-    URLs must be separated by a ";" and the other fields must be separated
-    by another delimiter. The processed data is written to a new file.
+    URLs must be separated by a semicolon and the other fields must be
+    separated by a comma. The processed data is written to a new file.
 
     Args:
-        infile: the path to the file to process
+        infile: path to Sierra export file to process
 
     Returns:
-        name of outfile as str
+        name of .csv as str
     """
-    processed_sierra_file = out_file("sierra_prepped.csv")
+    processed_sierra_file = out_file("prepped_sierra_input.csv")
     with open(infile, "r", encoding="utf-8") as csvfile:
         reader = csv.reader(csvfile, delimiter=",")
-        next(reader)
         for row in reader:
             oclc_no = row[0]
             bib_id = row[1]
@@ -161,10 +196,10 @@ def prep_sierra_csv(infile: str) -> str:
                     save_csv(
                         processed_sierra_file,
                         [
-                            oclc_no.strip().strip("(OCoLC)"),
-                            bib_id,
                             url,
                             str(url.split("?cid=")[1].strip()),
+                            oclc_no.strip().strip("(OCoLC)"),
+                            bib_id,
                         ],
                     )
             elif "?cid=" in row[2] and ";" not in row[2]:
@@ -172,10 +207,10 @@ def prep_sierra_csv(infile: str) -> str:
                 save_csv(
                     processed_sierra_file,
                     [
-                        oclc_no.strip().strip("(OCoLC)"),
-                        bib_id,
                         url,
                         str(url.split("?cid=")[1].strip()),
+                        oclc_no.strip().strip("(OCoLC)"),
+                        bib_id,
                     ],
                 )
     return processed_sierra_file
@@ -183,32 +218,118 @@ def prep_sierra_csv(infile: str) -> str:
 
 def prep_csv_sample(infile: str) -> str:
     """
-    Read a .csv of compared data into a pd.DataFrame and return a sample of the data.
-    Sample will contain 5% of the rows of the infile.
-    Sample will be output to a .csv file and returned as a DataFrame.
+    Read a .csv and returns a sample of the data as a new .csv.
+    Outputs 5% of rows using a random selection.
 
     Args:
-        infile: name of .csv file to read
-        outfile: name of .csv file to output sample to
-        header: if the .csv file contains a header, the header row as an int
+        infile: full path to .csv file to read
 
     Returns:
         the name of the file that the sample was output to
     """
-    sample_out = out_file("sample_records_to_check.csv")
-    file_length = get_file_length(infile)
-    with open(infile, "r", encoding="utf-8") as csvfile:
+    sample_out = out_file(f"sample{infile.split('records')[1].split('.csv')[0]}")
+    file_length = get_file_length(f"{date_directory()}/{infile}")
+    sample_count = round(file_length / 20)
+    with open(f"{date_directory()}/{infile}", "r", encoding="utf-8") as csvfile:
         reader = csv.reader(csvfile, delimiter=",")
         next(reader)
-        for row in itertools.islice(reader, 0, file_length, 20):
-            save_csv(
-                sample_out,
-                [
-                    row[0],
-                    row[1],
-                    row[2],
-                    row[3],
-                    row[4],
-                ],
-            )
+
+        sample = random.choices(list(reader), k=sample_count)
+        for row in sample:
+            out_row = [i for i in row]
+            save_csv(sample_out, out_row)
     return sample_out
+
+
+def compare_files(sierra_file: str, naxos_file: str) -> None:
+    """
+    Compare prepped Naxos and Sierra files. Joins .csv files on CID
+    and creates three output files:
+    - records_to_check.csv: overlap between Sierra and Naxos data
+    - records_to_import.csv: records in Naxos xml that are not in Sierra
+    - records_to_delete.csv: records in Sierra that are not in Naxos xml
+
+    URLs from records_to_check.csv and records_to_import.csv should be
+    reviewed to identify dead links.
+
+    Args:
+        sierra_file: path to prepped sierra .csv file
+        naxos_file: path to prepped naxos .csv file
+    """
+    # create output files
+    check_csv = out_file("records_to_check.csv")
+    delete_csv = out_file("records_to_delete.csv")
+    import_csv = out_file("records_to_import.csv")
+
+    # read input files into dataframes
+    sierra_df = pd.read_csv(
+        sierra_file,
+        header=None,
+        names=[
+            "URL_SIERRA",
+            "CID_SIERRA",
+            "OCLC_NUMBER",
+            "BIB_ID",
+        ],
+        dtype=str,
+    )
+    naxos_df = pd.read_csv(
+        naxos_file,
+        header=None,
+        names=["URL_NAXOS", "CID_NAXOS", "TITLE", "PUBLISHER", "SERIES"],
+        dtype=str,
+    )
+
+    # drop duplicate rows, just in case
+    sierra_df.drop_duplicates(inplace=True)
+    naxos_df.drop_duplicates(inplace=True)
+
+    # merge dataframes with an inner join and write matched rows to file
+    check_df = sierra_df.merge(naxos_df, left_on="CID_SIERRA", right_on="CID_NAXOS")
+    check_df.to_csv(
+        check_csv,
+        index=False,
+        columns=[
+            "URL_NAXOS",
+            "CID_SIERRA",
+            "OCLC_NUMBER",
+            "BIB_ID",
+        ],
+        header=False,
+    )
+    print(f"urls to check in {check_csv}")
+
+    # merge dataframes with an outer join to identify unique rows
+    unique_df = sierra_df.merge(
+        naxos_df,
+        how="outer",
+        indicator=True,
+        left_on="CID_SIERRA",
+        right_on="CID_NAXOS",
+    )
+
+    # write rows only in sierra input to file
+    sierra_unique = unique_df[unique_df["_merge"] == "left_only"]
+    sierra_unique.to_csv(
+        delete_csv,
+        index=False,
+        columns=["URL_SIERRA", "CID_SIERRA", "OCLC_NUMBER", "BIB_ID"],
+        header=False,
+    )
+    print(f"records to delete in {delete_csv}")
+
+    # write rows only in naxos input to file
+    naxos_unique = unique_df[unique_df["_merge"] == "right_only"]
+    naxos_unique.to_csv(
+        import_csv,
+        index=False,
+        columns=[
+            "URL_NAXOS",
+            "CID_NAXOS",
+            "TITLE",
+            "PUBLISHER",
+            "SERIES",
+        ],
+        header=False,
+    )
+    print(f"records to import in {import_csv}")
