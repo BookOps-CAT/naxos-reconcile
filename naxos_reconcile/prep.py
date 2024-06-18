@@ -6,7 +6,7 @@ import xml.etree.ElementTree as ET
 import pandas as pd
 from pymarc import MARCWriter, parse_xml_to_array
 
-from naxos_reconcile.utils import out_file, save_csv, get_file_length, date_directory
+from naxos_reconcile.utils import out_file, save_csv, get_file_length
 
 MARC_URI = "http://www.loc.gov/MARC21/slim"
 MARC_NS = "{http://www.loc.gov/MARC21/slim}"
@@ -222,15 +222,15 @@ def prep_csv_sample(infile: str) -> str:
     Outputs 5% of rows using a random selection.
 
     Args:
-        infile: full path to .csv file to read
+        infile: name of .csv file to read
 
     Returns:
-        the name of the file that the sample was output to
+        the name of the file that sample was output to
     """
-    sample_out = out_file(f"sample{infile.split('records')[1].split('.csv')[0]}")
-    file_length = get_file_length(f"{date_directory()}/{infile}")
+    sample_out = out_file(f"sample{infile.split('records')[1]}")
+    file_length = get_file_length(infile)
     sample_count = round(file_length / 20)
-    with open(f"{date_directory()}/{infile}", "r", encoding="utf-8") as csvfile:
+    with open(infile, "r", encoding="utf-8") as csvfile:
         reader = csv.reader(csvfile, delimiter=",")
         next(reader)
 
@@ -241,7 +241,7 @@ def prep_csv_sample(infile: str) -> str:
     return sample_out
 
 
-def compare_files(sierra_file: str, naxos_file: str) -> None:
+def compare_files(sierra_file: str, naxos_file: str) -> tuple:
     """
     Compare prepped Naxos and Sierra files. Joins .csv files on CID
     and creates three output files:
@@ -257,9 +257,9 @@ def compare_files(sierra_file: str, naxos_file: str) -> None:
         naxos_file: path to prepped naxos .csv file
     """
     # create output files
-    check_csv = out_file("records_to_check.csv")
-    delete_csv = out_file("records_to_delete.csv")
-    import_csv = out_file("records_to_import.csv")
+    records_to_check = out_file("records_to_check.csv")
+    records_to_import = out_file("records_to_import.csv")
+    records_to_delete = out_file("records_to_delete.csv")
 
     # read input files into dataframes
     sierra_df = pd.read_csv(
@@ -287,7 +287,7 @@ def compare_files(sierra_file: str, naxos_file: str) -> None:
     # merge dataframes with an inner join and write matched rows to file
     check_df = sierra_df.merge(naxos_df, left_on="CID_SIERRA", right_on="CID_NAXOS")
     check_df.to_csv(
-        check_csv,
+        records_to_check,
         index=False,
         columns=[
             "URL_NAXOS",
@@ -297,7 +297,7 @@ def compare_files(sierra_file: str, naxos_file: str) -> None:
         ],
         header=False,
     )
-    print(f"urls to check in {check_csv}")
+    print(f"urls to check in {records_to_check}")
 
     # merge dataframes with an outer join to identify unique rows
     unique_df = sierra_df.merge(
@@ -311,17 +311,17 @@ def compare_files(sierra_file: str, naxos_file: str) -> None:
     # write rows only in sierra input to file
     sierra_unique = unique_df[unique_df["_merge"] == "left_only"]
     sierra_unique.to_csv(
-        delete_csv,
+        records_to_delete,
         index=False,
         columns=["URL_SIERRA", "CID_SIERRA", "OCLC_NUMBER", "BIB_ID"],
         header=False,
     )
-    print(f"records to delete in {delete_csv}")
+    print(f"records to delete in {records_to_delete}")
 
     # write rows only in naxos input to file
     naxos_unique = unique_df[unique_df["_merge"] == "right_only"]
     naxos_unique.to_csv(
-        import_csv,
+        records_to_import,
         index=False,
         columns=[
             "URL_NAXOS",
@@ -332,4 +332,5 @@ def compare_files(sierra_file: str, naxos_file: str) -> None:
         ],
         header=False,
     )
-    print(f"records to import in {import_csv}")
+    print(f"records to import in {records_to_import}")
+    return records_to_check, records_to_import

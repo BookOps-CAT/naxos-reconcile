@@ -1,7 +1,7 @@
 import csv
 import json
-import datetime
-import itertools
+from datetime import date
+from itertools import islice
 import os
 from typing import Generator
 from bookops_worldcat import WorldcatAccessToken
@@ -28,8 +28,8 @@ def get_file_length(file: str) -> int:
 
 def date_directory() -> str:
     """create directory for output files using today's date"""
-    date = datetime.date.today()
-    return f"./data/files/{str(date)}"
+    today_date = date.today()
+    return f"data/files/{str(today_date)}"
 
 
 def out_file(file: str) -> str:
@@ -50,6 +50,14 @@ def save_csv(outfile: str, row: list) -> None:
         out.writerow(row)
 
 
+def open_csv_file(file: str, last_row: int) -> Generator:
+    """open a csv file to and yield the next row"""
+    with open(file, "r", encoding="utf-8") as csv_file:
+        reader = csv.reader(csv_file, delimiter=",")
+        for row in islice(reader, last_row, None):
+            yield row
+
+
 def get_token(filepath: str) -> WorldcatAccessToken:
     """get token for worldcat searches"""
     with open(filepath, "r") as file:
@@ -59,11 +67,3 @@ def get_token(filepath: str) -> WorldcatAccessToken:
             secret=data["secret"],
             scopes=data["scopes"],
         )
-
-
-def open_csv_file(file: str, last_row: int) -> Generator:
-    """open a csv file to and yield the next row"""
-    with open(file, "r", encoding="utf-8") as csv_file:
-        reader = csv.reader(csv_file, delimiter=",")
-        for row in itertools.islice(reader, last_row, None):
-            yield row

@@ -41,7 +41,7 @@ def mock_404_response(monkeypatch):
 @pytest.fixture
 def test_date_directory(tmpdir):
     today = datetime.date.today()
-    return tmpdir.join(f"{today}")
+    return tmpdir.join(f"data/files/{today}")
 
 
 @pytest.fixture
@@ -70,6 +70,26 @@ def test_marc_xml() -> ET.ElementTree:
             tag="024",
             indicators=["1", "1"],
             subfields=[Subfield(code="a", value="0123456789")],
+        ),
+        Field(
+            tag="245",
+            indicators=["0", "0"],
+            subfields=[
+                Subfield(code="a", value="Foo"),
+            ],
+        ),
+        Field(
+            tag="260",
+            indicators=[" ", " "],
+            subfields=[
+                Subfield(code="a", value="Hong Kong :"),
+                Subfield(code="b", value="Naxos Digital Services US Inc."),
+            ],
+        ),
+        Field(
+            tag="490",
+            indicators=["1", " "],
+            subfields=[Subfield(code="a", value="Naxos Music Library")],
         ),
         Field(
             tag="505",

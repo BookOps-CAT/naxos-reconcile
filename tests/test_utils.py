@@ -1,18 +1,26 @@
 import datetime
 import csv
+import os
 import pytest
 
-from naxos_reconcile.utils import get_file_length, date_directory, out_file, save_csv
+from naxos_reconcile.utils import (
+    get_file_length,
+    date_directory,
+    out_file,
+    save_csv,
+    open_csv_file,
+    get_token,
+)
 
 
 def test_get_file_length():
     file_length = get_file_length("tests/test_csv.csv")
-    assert file_length == 8
+    assert file_length == 7
 
 
 def test_date_directory():
     today = datetime.date.today()
-    assert date_directory() == f"./data/files/{today}"
+    assert date_directory() == f"data/files/{today}"
 
 
 @pytest.mark.parametrize("file", ["foo", "bar"])
@@ -31,3 +39,15 @@ def test_save_csv(tmpdir):
             assert row[1] == "BIB_ID"
             assert row[2] == "URL"
             assert row[3] == "CID"
+
+
+def test_open_csv_file():
+    bib_ids = []
+    data = open_csv_file("tests/test_csv.csv", 3)
+    for row in data:
+        bib_ids.append(row[1])
+    assert len(bib_ids) == 4
+
+
+def test_get_token():
+    path = os.path.join(os.environ["USERPROFILE"], ".oclc/nyp_wc_test.json")

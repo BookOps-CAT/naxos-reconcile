@@ -67,11 +67,11 @@ Prep files from Sierra and Naxos and then compare them
 Use data from prepped `.csv` files to query WorldCat Metadata API and check if the URL from the record is live. 
 
 #### Options
-`-f`, `--file`: File to get WorldCat results for.
-`-r`, `--row`: The last row that was checked/the row to start the search on. Default is 0. To restart a timed-out search, enter the last completed row.
+`-f`, `--file`: File to check for WorldCat records and dead links.
+`-r`, `--row`: Row to start the search on. Default is 0. To restart a timed-out search, enter the last completed row.
 
 #### Process
-1) Queries WorldCat Metadata API for brief bibs using the CID and the /brief-bibs/search/ endpoint. Starts search after row number provided with `--row` arg.
+1) Queries WorldCat Metadata API for brief bibs using /brief-bibs/search/ endpoint. Starts search after row number provided with `--row` arg. Query uses mn (Music/Publisher Number) and am (Access Method) indexes.
 2) Checks if URL is live. Possible URL statuses:
     - Dead: URL check resulted in 404 error from Naxos website
     - Unavailable: Naxos website lists that item is restricted within US due to copyright 
@@ -83,8 +83,42 @@ Use data from prepped `.csv` files to query WorldCat Metadata API and check if t
     - number of records returned by Metadata API 
     - oclc number(s)
     - cataloging agency (for records from oclc number)
+    - whether or not the OCLC number identified by the API query matches the number in the Sierra record (only included if the input file contains data from Sierra, ie. `records_to_check.csv` or `sample_to_check.csv`)
     - status of URL
 
+### `naxos url-check`
+Read data from prepped `.csv` file and check if the URLs are live. 
+
+#### Options
+`-f`, `--file`: File with URLs to check
+`-r`, `--row`: Row to start the search on. Default is 0. To restart a timed-out search, enter the last completed row.
+
+#### Process
+1) Checks if URL is live. Possible URL statuses:
+    - Dead: URL check resulted in 404 error from Naxos website
+    - Unavailable: Naxos website lists that item is restricted within US due to copyright 
+    - Live: item is still accessible and playable online
+    - Blocked: Naxos blocked access when the URL was crawled the URl should be rechecked
+    - Unknown: An unknown issue arose during URL check
+2) The results of the query will be output to `.csv` file with:
+    - rows from input `.csv`, 
+    - status of URL
+
+### `naxos search-only`
+Read data from prepped `.csv` file and query WorldCat Metadata API for brief bib records.
+
+#### Options
+`-f`, `--file`: File to get WorldCat results for.
+`-r`, `--row`: Row to start the search on. Default is 0. To restart a timed-out search, enter the last completed row.
+
+#### Process
+1) Queries WorldCat Metadata API for brief bibs using /brief-bibs/search/ endpoint. Starts search after row number provided with `--row` arg. Query uses mn (Music/Publisher Number) and am (Access Method) indexes.
+2) The results of the query will be output to `.csv` file with:
+    - rows from input `.csv`, 
+    - number of records returned by Metadata API 
+    - oclc number(s)
+    - cataloging agency (for records from oclc number)
+    - whether or not the OCLC number identified by the API query matches the number in the Sierra record (only included if the input file contains data from Sierra, ie. `records_to_check.csv` or `sample_to_check.csv`)
 
 ### `naxos review`
 Reviews output of overlap and import record searches and prints review. 

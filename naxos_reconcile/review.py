@@ -1,6 +1,5 @@
 import os
 import pandas as pd
-from naxos_reconcile.utils import date_directory
 
 
 def review_all_results(date: str) -> None:
@@ -10,7 +9,7 @@ def review_all_results(date: str) -> None:
     using the `review_file` function.
     """
     all_files = os.listdir(date)
-    results_files = [i for i in all_files if "import_results.csv" in i]
+    results_files = [i for i in all_files if "_results.csv" in i]
     n = 1
     for file in results_files:
         if "import" in file:
@@ -18,7 +17,7 @@ def review_all_results(date: str) -> None:
         else:
             file_type = "check"
         print(f"Results for file #{n}, {file.split('/')[-1]}")
-        review_file(infile=f"{date_directory()}/{file}", file_type=file_type)
+        review_file(infile=f"./data/files/{date}/{file}", file_type=file_type)
 
 
 def review_file(infile: str, file_type: str) -> None:
@@ -43,7 +42,7 @@ def review_file(infile: str, file_type: str) -> None:
             "NUMBER_OF_RECORDS",
             "OCLC_NUM",
             "RECORD_SOURCE",
-            "URL_STATUS",
+            # "URL_STATUS",
         ]
         df = pd.read_csv(
             infile,
@@ -51,9 +50,9 @@ def review_file(infile: str, file_type: str) -> None:
             names=columns,
             converters={
                 "NUMBER_OF_RECORDS": lambda x: int(x),
-                "OCLC_MATCH": lambda x: eval(x),
             },
             index_col=False,
+            on_bad_lines="warn",
         )
     else:
         columns = [
@@ -65,7 +64,7 @@ def review_file(infile: str, file_type: str) -> None:
             "OCLC_NUM",
             "RECORD_SOURCE",
             "OCLC_MATCH",
-            "URL_STATUS",
+            # "URL_STATUS",
         ]
         df = pd.read_csv(
             infile,
@@ -73,10 +72,11 @@ def review_file(infile: str, file_type: str) -> None:
             names=columns,
             converters={
                 "NUMBER_OF_RECORDS": lambda x: int(x),
+                "OCLC_MATCH": lambda x: eval(x),
             },
             index_col=False,
+            on_bad_lines="warn",
         )
-
     df.drop_duplicates(inplace=True)
     total = df.shape[0]
     with_record = df[df["NUMBER_OF_RECORDS"] >= 1].shape[0]
@@ -86,7 +86,7 @@ def review_file(infile: str, file_type: str) -> None:
         f"{round((with_record / total), 2) * 100}%"
     )
     if "OCLC_MATCH" in df:
-        sierra_match = df[df["OCLC_MATCH"] == "True"].shape[0]
+        sierra_match = df[df["OCLC_MATCH"] == True].shape[0]
         print(
             f"Records with match on OCLC number from Sierra: {sierra_match}/{total}, "
             f"{round((sierra_match / total), 2) * 100}%"

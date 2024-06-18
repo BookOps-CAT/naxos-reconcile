@@ -10,7 +10,11 @@ from naxos_reconcile.prep import (
     compare_files,
 )
 from naxos_reconcile.review import review_all_results
-from naxos_reconcile.check import search_oclc_check_urls
+from naxos_reconcile.check import (
+    search_oclc_check_urls,
+    search_oclc_only,
+    check_urls_only,
+)
 
 
 @click.group()
@@ -87,11 +91,13 @@ def reconcile_files(sierra_file: str, naxos_filepath: str) -> None:
     print(f"Prepped csv is in  file is in {naxos_prepped_csv}")
 
     print("Comparing files")
-    compare_files(sierra_file=sierra_prepped_csv, naxos_file=naxos_prepped_csv)
+    records_to_check, records_to_import = compare_files(
+        sierra_file=sierra_prepped_csv, naxos_file=naxos_prepped_csv
+    )
 
     print("Creating sample files")
-    prep_csv_sample("records_to_check.csv")
-    prep_csv_sample("records_to_import.csv")
+    prep_csv_sample(records_to_check)
+    prep_csv_sample(records_to_import)
     print("Finished prepping files")
 
 
@@ -112,6 +118,48 @@ def reconcile_files(sierra_file: str, naxos_filepath: str) -> None:
 def search_worldcat(file: str, row: int) -> None:
     print(f"Searching WorldCat for records for {file}")
     results_file = search_oclc_check_urls(infile=file, last_row=row)
+    print(f"Results in {results_file}")
+
+
+@click.option(
+    "-f",
+    "--file",
+    "file",
+    help="File to review",
+)
+@click.option(
+    "-r",
+    "--row",
+    "row",
+    default=0,
+    help="Last row checked",
+)
+@cli.command("url-check", short_help="Check URLs only")
+def check_urls(file: str, row: int) -> None:
+    print(f"Checking URLs for {file}")
+    results_file = check_urls_only(
+        infile=file, outfile="records_to_import_full_results.csv", last_row=row
+    )
+    print(f"Results in {results_file}")
+
+
+@click.option(
+    "-f",
+    "--file",
+    "file",
+    help="File to review",
+)
+@click.option(
+    "-r",
+    "--row",
+    "row",
+    default=0,
+    help="Last row checked",
+)
+@cli.command("search-only", short_help="Search for records in WorldCat only")
+def search_worldcat_only(file: str, row: int) -> None:
+    print(f"Searching WorldCat for records for {file}")
+    results_file = search_oclc_only(infile=file, last_row=row)
     print(f"Results in {results_file}")
 
 

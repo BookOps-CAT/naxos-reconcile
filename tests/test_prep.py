@@ -1,6 +1,8 @@
 import csv
+import os
 import xml.etree.ElementTree as ET
 from pymarc import MARCReader
+import pandas as pd
 import pytest
 
 from naxos_reconcile.prep import (
@@ -10,6 +12,7 @@ from naxos_reconcile.prep import (
     prep_naxos_csv,
     prep_sierra_csv,
     prep_csv_sample,
+    compare_files,
 )
 
 from naxos_reconcile.utils import out_file
@@ -60,7 +63,7 @@ def test_edit_naxos_xml(test_marc_xml, test_date_directory, mock_date_directory)
     marc_511s = [
         i.text for i in test_root.findall(f".//{MARC_NS}datafield[@tag='511']")
     ]
-    assert "naxos_edited.xml" in test_xml
+    assert "naxos_marc_edited.xml" in test_xml
     assert test_root.tag == f"{MARC_NS}collection"
     assert len(marc_urls) == 6
     assert "http://nypl.naxosmusiclibrary.com/catalogue/item.asp?cid=foo" in marc_urls
@@ -95,7 +98,6 @@ def test_prep_naxos_csv(test_marc_xml, test_date_directory, mock_date_directory)
             xml_declaration=True,
         )
     file = combine_naxos_xml(test_date_directory)
-
     test_csv = prep_naxos_csv(file)
     control_nos = []
     with open(test_csv, "r") as csv_file:
@@ -113,25 +115,26 @@ def test_prep_sierra_csv(test_date_directory, mock_date_directory):
     with open(test_csv, "r") as csv_file:
         reader = csv.reader(csv_file, delimiter=",")
         for row in reader:
-            urls.append(row[2])
-            control_nos.append(row[1])
+            urls.append(row[0])
+            control_nos.append(row[2])
     assert len(urls) == 9
     assert sorted(control_nos) == [
-        "b218396235",
-        "b218396247",
-        "b218396247",
-        "b218396259",
-        "b218396259",
-        "b218396260",
-        "b218396272",
-        "b218396284",
-        "b218396296",
+        "58540368",
+        "58540422",
+        "58540422",
+        "58540442",
+        "58540442",
+        "58540558",
+        "58540630",
+        "58540680",
+        "58540716",
     ]
 
 
 def test_prep_csv_sample(test_date_directory, mock_date_directory):
     n = 0
-    with open(out_file("test_combined.csv"), "a") as csvfile:
+    out = out_file("records_to_test.csv")
+    with open(out, "a") as csvfile:
         writer = csv.writer(
             csvfile,
             delimiter=",",
@@ -140,18 +143,65 @@ def test_prep_csv_sample(test_date_directory, mock_date_directory):
         while n < 40:
             writer.writerow(
                 [
-                    "1039717294",
-                    "b216209031",
-                    "00028948328901",
                     "http://nypl.naxosmusiclibrary.com/catalogue/item.asp?cid=00028948328901",
                     "00028948328901",
+                    "1039717294",
+                    "b216209031",
                 ]
             )
             n += 1
     control_nos = []
-    sample = prep_csv_sample(f"{test_date_directory}/test_combined.csv")
+    sample = prep_csv_sample(out)
     with open(sample, "r") as csvfile:
         reader = csv.reader(csvfile, delimiter=",")
         for row in reader:
             control_nos.append(row[1])
     assert len(control_nos) == 2
+
+
+def test_compare_files(test_date_directory, mock_date_directory):
+    sierra_df = pd.DataFrame(
+        [
+            [
+                "123",
+                "456",
+                "https://nypl.naxosmusiclibrary.com/catalogue/item.asp?cid=foo",
+                "foo",
+            ],
+            [
+                "987",
+                "654",
+                "https://nypl.naxosmusiclibrary.com/catalogue/item.asp?cid=bar",
+                "bar",
+            ],
+        ]
+    )
+    sierra_df.to_csv(out_file("sierra.csv"), index=False)
+    naxos_df = pd.DataFrame(
+        [
+            [
+                "https://nypl.naxosmusiclibrary.com/catalogue/item.asp?cid=foo",
+                "foo" "foo",
+            ],
+            [
+                "https://nypl.naxosmusiclibrary.com/catalogue/item.asp?cid=baz",
+                "baz",
+                "baz",
+            ],
+        ]
+    )
+    naxos_df.to_csv(out_file("naxos.csv"), index=False)
+    check_file, import_file = compare_files(
+        sierra_file=out_file("naxos.csv"), naxos_file=out_file("naxos.csv")
+    )
+    assert sorted(
+        [
+            "records_to_check.csv",
+            "records_to_import.csv",
+            "records_to_delete.csv",
+            "sierra.csv",
+            "naxos.csv",
+        ]
+    ) == sorted(os.listdir(test_date_directory))
+    assert check_file == f"{test_date_directory}/records_to_check.csv"
+    assert import_file == f"{test_date_directory}/records_to_import.csv"
