@@ -116,7 +116,7 @@ def reconcile_files(sierra_file: str, naxos_filepath: str) -> None:
 )
 @cli.command("search", short_help="Search for records in WorldCat")
 def search_worldcat(file: str, row: int) -> None:
-    print(f"Searching WorldCat for records for {file}")
+    print(f"Searching WorldCat and checking URLs for {file}")
     results_file = search_oclc_check_urls(infile=file, last_row=row)
     print(f"Results in {results_file}")
 

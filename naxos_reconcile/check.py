@@ -423,9 +423,8 @@ def search_oclc_check_urls(infile: str, last_row: int) -> str:
     file_length = get_file_length(f"{date_directory()}/{infile}")
     token = get_token(os.path.join(os.environ["USERPROFILE"], ".oclc/nyp_wc_test.json"))
     driver = Driver(uc=True, headless=True)
-    driver_wait = WebDriverWait(driver, 3, ignored_exceptions=ERRORS)
+    driver_wait = WebDriverWait(driver, 2, ignored_exceptions=ERRORS)
     with MetadataSession(authorization=token, totalRetries=3) as session:
-        check_cookie(wait=driver_wait)
         for row in data:
             start = perf_counter()
             status = get_selenium_status(driver=driver, wait=driver_wait, url=row[0])
@@ -451,10 +450,10 @@ def search_oclc_check_urls(infile: str, last_row: int) -> str:
                     row.extend([False])
             save_csv(outfile, row)
             stop = perf_counter()
-            print(f"Record {n} of {file_length}. Search took {stop-start:0.4f} seconds")
             print(
-                f"URL is {status}. "
-                f"{parsed_data['number_of_records']} record(s) in OCLC."
+                f"{n} of {file_length}. URL is {status}. "
+                f"{parsed_data['number_of_records']} OCLC record(s). "
+                f"Search time: {stop-start:0.4f} seconds"
             )
             n += 1
     return outfile

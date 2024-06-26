@@ -8,7 +8,7 @@ def review_all_results(date: str) -> None:
     and reviews each file containing "_results.csv" in the file name
     using the `review_file` function.
     """
-    all_files = os.listdir(date)
+    all_files = os.listdir(f"data/files/{date}")
     results_files = [i for i in all_files if "_results.csv" in i]
     n = 1
     for file in results_files:
@@ -42,7 +42,7 @@ def review_file(infile: str, file_type: str) -> None:
             "NUMBER_OF_RECORDS",
             "OCLC_NUM",
             "RECORD_SOURCE",
-            # "URL_STATUS",
+            "URL_STATUS",
         ]
         df = pd.read_csv(
             infile,
@@ -64,7 +64,7 @@ def review_file(infile: str, file_type: str) -> None:
             "OCLC_NUM",
             "RECORD_SOURCE",
             "OCLC_MATCH",
-            # "URL_STATUS",
+            "URL_STATUS",
         ]
         df = pd.read_csv(
             infile,
