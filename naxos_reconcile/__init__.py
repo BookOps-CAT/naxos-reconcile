@@ -9,7 +9,7 @@ from naxos_reconcile.prep import (
     prep_csv_sample,
     compare_files,
 )
-from naxos_reconcile.review import review_all_results
+from naxos_reconcile.review import review_file
 from naxos_reconcile.check import (
     search_oclc_check_urls,
     search_oclc_only,
@@ -163,16 +163,10 @@ def search_worldcat_only(file: str, row: int) -> None:
     print(f"Results in {results_file}")
 
 
-@click.option(
-    "-d",
-    "--date",
-    "date",
-    help="Date directory to check (in YYYY-MM-DD format)",
-)
+@click.option("-f", "--file", "file", help="File to review", multiple=True)
 @cli.command("review", short_help="Review output of WorldCat searches and URL checks")
-def review_data(date):
-    print("Results of WorldCat Searches and URL checks:")
-    review_all_results(date)
+def review_data(file: str):
+    review_file(file)
 
 
 def main():

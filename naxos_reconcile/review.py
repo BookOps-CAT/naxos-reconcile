@@ -1,38 +1,16 @@
-import os
 import pandas as pd
 
 
-def review_all_results(date: str) -> None:
+def review_file(infile: str) -> None:
     """
-    Reads directory for date provided (in format YYYY-MM-DD)
-    and reviews each file containing "_results.csv" in the file name
-    using the `review_file` function.
-    """
-    all_files = os.listdir(f"data/files/{date}")
-    results_files = [i for i in all_files if "_results.csv" in i]
-    n = 1
-    for file in results_files:
-        if "import" in file:
-            file_type = "import"
-        else:
-            file_type = "check"
-        print(f"Results for file #{n}, {file.split('/')[-1]}")
-        review_file(infile=f"./data/files/{date}/{file}", file_type=file_type)
-
-
-def review_file(infile: str, file_type: str) -> None:
-    """
-    Reads  csv outputs from WorldCat API queries and URL checks and
-    reviews results. Summary of results is printed to stdout.
+    Reads csv file output from WorldCat API queries and URL checks
+    and summarizes results.
 
     Args:
         infile:
             path to file to review
-        file_type:
-            whether the file to be reviewed is a "records_to_import.csv" or
-            "records_to_check.csv".
     """
-    if file_type == "import":
+    if "import" in infile:
         columns = [
             "URL",
             "CID",

@@ -1,7 +1,5 @@
 import os
 from time import perf_counter
-import itertools
-import requests
 from bookops_worldcat import MetadataSession
 from seleniumbase import Driver, SB
 from selenium.webdriver.common.by import By
@@ -245,48 +243,6 @@ def check_urls_only(infile: str, outfile: str, last_row: int) -> str:
     return outfile
 
 
-def check_urls_in_batch(infile: str, last_row: int) -> str:
-    """
-    Check if URLs are live. Outputs a .csv file with status of URL.
-    Possible URL statuses:
-    - Live
-    - Dead
-    - Unavailable
-    - Blocked
-    - Unknown
-
-    Args:
-        infile:
-            filename for file to be used in queries
-        last_row:
-            the last row from infile to be checked.
-            CLI command will default to 0 if not provided
-    Returns:
-        name of .csv outfile as str
-    """
-    # outfile = out_file(f"{infile.split('.csv')[0]}_full_results.csv")
-    outfile = out_file(f"{infile.split('_search_results.csv')[0]}_full_results.csv")
-    n = last_row + 1
-    data = open_csv_file(f"{date_directory()}/{infile}", last_row)
-    # file_length = get_file_length(f"{date_directory()}/{infile}")
-    pairs = itertools.batched(data, 2)
-    with SB(uc=True, headless=True) as sb:
-        driver_wait = WebDriverWait(sb.driver, 2, ignored_exceptions=ERRORS)
-        for records in pairs:
-            start = perf_counter()
-            save_csv(outfile, records[0])
-            response = requests.get(records[0][0])
-            status = "Live" if "Album Information" in response.text else "Dead"
-            records[0].append(status)
-            save_csv(outfile, records[0])
-            status = get_selenium_status(driver=sb, wait=driver_wait, url=records[1][0])
-            check_logout(wait=driver_wait)
-            stop = perf_counter()
-            print(f"{stop-start:0.4f} seconds")
-            n += 1
-    return outfile
-
-
 def click_cookie(wait: WebDriverWait) -> None:
     """wait until cookie button is available and click it"""
     button = wait.until(EC.element_to_be_clickable((By.ID, "cmpwelcomebtnyes")))
@@ -452,7 +408,6 @@ def search_oclc_check_urls(infile: str, last_row: int) -> str:
             stop = perf_counter()
             print(
                 f"{n} of {file_length}. URL is {status}. "
-                f"{parsed_data['number_of_records']} OCLC record(s). "
                 f"Search time: {stop-start:0.4f} seconds"
             )
             n += 1

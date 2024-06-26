@@ -121,17 +121,17 @@ Read data from prepped `.csv` file and query WorldCat Metadata API for brief bib
     - whether or not the OCLC number identified by the API query matches the number in the Sierra record (only included if the input file contains data from Sierra, ie. `records_to_check.csv` or `sample_to_check.csv`)
 
 ### `naxos review`
-Reviews output of overlap and import record searches and prints review. 
+Reviews output of record searches and URL checks and prints review. 
 
 #### Options
-`-o`, `--overlap`: overlap file search results to review. Default is `sample_records_to_check_worldcat_results.csv`
-`-i`, `--import_file`: import file search results to review. Default is `records_to_import_worldcat_results.csv`
+`-f`, `--file`: File to review. Multiple files can be reviewed with each separated by `-f` flag
 
 #### Process
-1) Review results of API queries and url checks for overlap file. Prints a total count and percentage of records with:
+1) Review results of API queries and url checks for file(s). Prints a total count and percentage of records with:
     - At least one match on CID in OCLC
-    - Match on CID to same OCLC record in Sierra
-    - Dead link in record
-2) Review results of API queries and url checks for import file. Prints a total count and percentage of records with:
-    - At least one match on CID in OCLC
-    - Dead link in record
+    - Match on CID to same OCLC record in Sierra (if the input file contains data from Sierra, ie. `records_to_check.csv` or `sample_to_check.csv`)
+    - Live URLs
+    - Dead URLs
+    - URLs that are unavailable in US due to copyright restrictions
+    - URLs that could not be checked
+    - URLs with unknown status
