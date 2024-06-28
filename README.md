@@ -124,10 +124,10 @@ Read data from prepped `.csv` file and query WorldCat Metadata API for brief bib
 Reviews output of record searches and URL checks and prints review. 
 
 #### Options
-`-f`, `--file`: File to review. Multiple files can be reviewed with each separated by `-f` flag
+`-f`, `--file`: File to review
 
 #### Process
-1) Review results of API queries and url checks for file(s). Prints a total count and percentage of records with:
+1) Review results of API queries and url checks for file. Prints a total count and percentage of records with:
     - At least one match on CID in OCLC
     - Match on CID to same OCLC record in Sierra (if the input file contains data from Sierra, ie. `records_to_check.csv` or `sample_to_check.csv`)
     - Live URLs
@@ -135,3 +135,5 @@ Reviews output of record searches and URL checks and prints review.
     - URLs that are unavailable in US due to copyright restrictions
     - URLs that could not be checked
     - URLs with unknown status
+2) Records without matches in WorldCat are written to a .csv ending with `no_oclc_record.csv`. 
+3) Records without live URLs are written to a .csv ending with `problem_urls.csv`

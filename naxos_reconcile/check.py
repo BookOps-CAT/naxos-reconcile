@@ -173,18 +173,17 @@ def search_oclc_only(infile: str, last_row: int) -> str:
     with MetadataSession(authorization=token, totalRetries=3) as session:
         for row in data:
             start = perf_counter()
-            print(f"Record {n} of {file_length}")
             response = session.brief_bibs_search(
                 q=f"mn='{row[1]}' OR am='{row[0].split('nypl.')[1]}'",
                 itemSubType="music-digital",
             )
             response_json = response.json()  # type: ignore[union-attr]
-            if response_json["numberOfRecords"] == 0 and "import" in infile:
-                response = session.brief_bibs_search(
-                    q=f"se='{row[4]}' AND ti='{row[2]}*'",
-                    itemSubType="music-digital",
-                )
-                response_json = response.json()  # type: ignore[union-attr]
+            # if response_json["numberOfRecords"] == 0 and "import" in infile:
+            #     response = session.brief_bibs_search(
+            #         q=f"se='{row[4]}' AND ti='{row[2]}*'",
+            #         itemSubType="music-digital",
+            #     )
+            #     response_json = response.json()  # type: ignore[union-attr]
             parsed_data = parse_worldcat_results(data=response_json, oclc_num=row[2])
             row.extend(
                 [
@@ -193,20 +192,19 @@ def search_oclc_only(infile: str, last_row: int) -> str:
                     parsed_data["record_source"],
                 ]
             )
-            if "check" in infile:
-                if parsed_data["oclc_number"] == row[2]:
-                    row.extend([True])
-                else:
-                    row.extend([False])
+            # if "check" in infile:
+            #     if parsed_data["oclc_number"] == row[2]:
+            #         row.extend([True])
+            #     else:
+            #         row.extend([False])
             save_csv(outfile, row)
             stop = perf_counter()
-            print(f"{parsed_data['number_of_records']} record(s) in OCLC.")
-            print(f"Search took {stop-start:0.4f} seconds")
+            print(f"Record {n} of {file_length}, search took {stop-start:0.4f} seconds")
             n += 1
     return outfile
 
 
-def check_urls_only(infile: str, outfile: str, last_row: int) -> str:
+def check_urls_only(infile: str, last_row: int) -> str:
     """
     Check if URLs are live. Outputs a .csv file with status of URL.
     Possible URL statuses:
@@ -225,7 +223,7 @@ def check_urls_only(infile: str, outfile: str, last_row: int) -> str:
     Returns:
         name of .csv outfile as str
     """
-    out = out_file(outfile)
+    outfile = out_file(f"{infile.split('.csv')[0]}_url_results.csv")
     n = last_row + 1
     data = open_csv_file(f"{date_directory()}/{infile}", last_row)
     file_length = get_file_length(f"{date_directory()}/{infile}")
@@ -236,7 +234,7 @@ def check_urls_only(infile: str, outfile: str, last_row: int) -> str:
             status = get_selenium_status(driver=sb, wait=driver_wait, url=row[0])
             check_logout(wait=driver_wait)
             row.append(status)
-            save_csv(out, row)
+            save_csv(outfile, row)
             stop = perf_counter()
             print(f"{n} of {file_length}, URL is {row[-1]}, {stop-start:0.4f} seconds")
             n += 1
@@ -399,11 +397,6 @@ def search_oclc_check_urls(infile: str, last_row: int) -> str:
                     status,
                 ]
             )
-            if "check" in infile:
-                if parsed_data["oclc_number"] == row[2]:
-                    row.extend([True])
-                else:
-                    row.extend([False])
             save_csv(outfile, row)
             stop = perf_counter()
             print(

@@ -9,7 +9,7 @@ from naxos_reconcile.prep import (
     prep_csv_sample,
     compare_files,
 )
-from naxos_reconcile.review import review_file
+from naxos_reconcile.review import review_file, dedupe_file
 from naxos_reconcile.check import (
     search_oclc_check_urls,
     search_oclc_only,
@@ -137,9 +137,7 @@ def search_worldcat(file: str, row: int) -> None:
 @cli.command("url-check", short_help="Check URLs only")
 def check_urls(file: str, row: int) -> None:
     print(f"Checking URLs for {file}")
-    results_file = check_urls_only(
-        infile=file, outfile="records_to_import_full_results.csv", last_row=row
-    )
+    results_file = check_urls_only(infile=file, last_row=row)
     print(f"Results in {results_file}")
 
 
@@ -163,10 +161,16 @@ def search_worldcat_only(file: str, row: int) -> None:
     print(f"Results in {results_file}")
 
 
-@click.option("-f", "--file", "file", help="File to review", multiple=True)
+@click.option("-f", "--file", "file", help="Path to file to review", multiple=True)
 @cli.command("review", short_help="Review output of WorldCat searches and URL checks")
-def review_data(file: str):
-    review_file(file)
+def review_data(file: str) -> None:
+    for f in file:
+        review_file(f)
+
+
+@cli.command("dedupe", short_help="Review output of WorldCat searches and URL checks")
+def dedupe_data() -> None:
+    dedupe_file("data/files/2024-06-28/records_to_import.csv")
 
 
 def main():

@@ -1,15 +1,42 @@
 import pandas as pd
 
 
+def dedupe_file(infile: str) -> None:
+    columns = [
+        "URL",
+        "CID",
+        "OCLC_SIERRA",
+        "BIB_ID",
+        "NUMBER_OF_RECORDS",
+        "OCLC_NUM",
+        "RECORD_SOURCE",
+        "URL_STATUS",
+    ]
+    df = pd.read_csv(
+        infile,
+        header=None,
+        names=columns,
+        index_col=False,
+        on_bad_lines="warn",
+    )
+    df.drop_duplicates(inplace=True)
+    print(df.shape[0])
+    df.to_csv(
+        f"{infile.split('.csv')[0]}_deduped.csv",
+        index=False,
+        header=False,
+    )
+
+
 def review_file(infile: str) -> None:
     """
     Reads csv file output from WorldCat API queries and URL checks
     and summarizes results.
 
     Args:
-        infile:
-            path to file to review
+        infile: name of file to review
     """
+
     if "import" in infile:
         columns = [
             "URL",
@@ -22,16 +49,6 @@ def review_file(infile: str) -> None:
             "RECORD_SOURCE",
             "URL_STATUS",
         ]
-        df = pd.read_csv(
-            infile,
-            header=None,
-            names=columns,
-            converters={
-                "NUMBER_OF_RECORDS": lambda x: int(x),
-            },
-            index_col=False,
-            on_bad_lines="warn",
-        )
     else:
         columns = [
             "URL",
@@ -41,61 +58,90 @@ def review_file(infile: str) -> None:
             "NUMBER_OF_RECORDS",
             "OCLC_NUM",
             "RECORD_SOURCE",
-            "OCLC_MATCH",
             "URL_STATUS",
         ]
-        df = pd.read_csv(
-            infile,
-            header=None,
-            names=columns,
-            converters={
-                "NUMBER_OF_RECORDS": lambda x: int(x),
-                "OCLC_MATCH": lambda x: eval(x),
-            },
-            index_col=False,
-            on_bad_lines="warn",
-        )
+    df = pd.read_csv(
+        infile,
+        header=None,
+        names=columns,
+        converters={
+            "NUMBER_OF_RECORDS": lambda x: int(x),
+        },
+        index_col=False,
+        on_bad_lines="warn",
+    )
     df.drop_duplicates(inplace=True)
     total = df.shape[0]
-    with_record = df[df["NUMBER_OF_RECORDS"] >= 1].shape[0]
 
+    print(f"\nResults for {infile}")
+    with_record = df[df["NUMBER_OF_RECORDS"] >= 1]
+    print("WorldCat queries:\n")
     print(
-        f"Records with at least one match in WorldCat: {with_record}/{total}, "
-        f"{round((with_record / total), 2) * 100}%"
+        "Records with at least one match in WorldCat: "
+        f"{int(with_record.shape[0])}/{total}, "
+        f"{round((int(with_record.shape[0]) / total), 4) * 100}%"
     )
-    if "OCLC_MATCH" in df:
-        sierra_match = df[df["OCLC_MATCH"] == True].shape[0]
+    one_oclc_record = df[df["NUMBER_OF_RECORDS"] == 1]
+    print(
+        "Records with exactly one match in WorldCat: "
+        f"{int(one_oclc_record.shape[0])}/{total}, "
+        f"{round((int(one_oclc_record.shape[0]) / total), 4) * 100}%"
+    )
+    no_oclc_record = df[df["NUMBER_OF_RECORDS"] == 0]
+    no_oclc_record.to_csv(
+        f"{infile.split('.csv')[0]}_no_oclc_record.csv",
+        index=False,
+        header=False,
+    )
+    print(
+        f"Records with no matches in WorldCat written to "
+        f"{infile.split('.csv')[0]}_no_oclc_record.csv"
+    )
+    problem_links = df[
+        (df["URL_STATUS"] == "Unavailable")
+        | (df["URL_STATUS"] == "Dead")
+        | (df["URL_STATUS"] == "Blocked")
+        | (df["URL_STATUS"] == "Unknown")
+    ]
+    dead_links = df[df["URL_STATUS"] == "Dead"]
+    live_links = df[df["URL_STATUS"] == "Live"]
+    unavailable_links = df[df["URL_STATUS"] == "Unavailable"]
+    blocked_links = df[df["URL_STATUS"] == "Blocked"]
+    unknown_status_links = df[df["URL_STATUS"] == "Unknown"]
+    print("\nURL checks:\n")
+    if live_links.shape[0] > 0:
         print(
-            f"Records with match on OCLC number from Sierra: {sierra_match}/{total}, "
-            f"{round((sierra_match / total), 2) * 100}%"
+            f"Total live urls: {live_links.shape[0]}/{total}, "
+            f"{round((live_links.shape[0] / total), 4) * 100}%"
         )
-    dead_links = int(df[df["URL_STATUS"] == "Dead"].shape[0])
-    live_links = int(df[df["URL_STATUS"] == "Live"].shape[0])
-    unavailable_links = int(df[df["URL_STATUS"] == "Unavailable"].shape[0])
-    blocked_links = int(df[df["URL_STATUS"] == "Blocked"].shape[0])
-    unknown_status_links = int(df[df["URL_STATUS"] == "Unknown"].shape[0])
-    if live_links > 0:
+    if problem_links.shape[0] > 0:
         print(
-            f"Records with live urls: {live_links}/{total}, "
-            f"{round((live_links / total), 2) * 100}%"
+            f"Total invalid urls: {problem_links.shape[0]}/{total}, "
+            f"{round((problem_links.shape[0] / total), 4) * 100}%"
         )
-    if dead_links > 0:
+    if dead_links.shape[0] > 0:
         print(
-            f"Records with dead links: {dead_links}/{total}, "
-            f"{round((dead_links / total), 2) * 100}%"
+            f"Dead urls: {dead_links.shape[0]}/{total}, "
+            f"{round((dead_links.shape[0] / total), 4) * 100}%"
         )
-    if unavailable_links > 0:
+    if unavailable_links.shape[0] > 0:
         print(
-            f"Records unavailable in US: {unavailable_links}/{total}, "
-            f"{round((unavailable_links / total), 2) * 100}%"
+            f"Unavailable in US: {unavailable_links.shape[0]}/{total}, "
+            f"{round((unavailable_links.shape[0] / total), 4) * 100}%"
         )
-    if blocked_links > 0:
+    if blocked_links.shape[0] > 0:
         print(
-            f"URL checks blocked for: {blocked_links}/{total}, "
-            f"{round((blocked_links / total), 2) * 100}%"
+            f"URL checks blocked: {blocked_links.shape[0]}/{total}, "
+            f"{round((blocked_links.shape[0] / total), 4) * 100}%"
         )
-    if unknown_status_links > 0:
+    if unknown_status_links.shape[0] > 0:
         print(
-            f"Unknown URL status for: {unknown_status_links}/{total}, "
-            f"{round((unknown_status_links / total), 2) * 100}%"
+            f"Unknown URL status: {unknown_status_links.shape[0]}/{total}, "
+            f"{round((unknown_status_links.shape[0] / total), 4) * 100}%"
         )
+    problem_links.to_csv(
+        f"{infile.split('.csv')[0]}_problem_urls.csv",
+        index=False,
+        header=False,
+    )
+    print(f"Records without live URLs in {infile.split('.csv')[0]}_problem_urls.csv")
