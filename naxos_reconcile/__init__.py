@@ -168,10 +168,5 @@ def review_data(file: str) -> None:
         review_file(f)
 
 
-@cli.command("dedupe", short_help="Review output of WorldCat searches and URL checks")
-def dedupe_data() -> None:
-    dedupe_file("data/files/2024-06-28/records_to_import.csv")
-
-
 def main():
     cli()
