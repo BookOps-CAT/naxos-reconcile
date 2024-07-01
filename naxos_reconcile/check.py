@@ -178,12 +178,6 @@ def search_oclc_only(infile: str, last_row: int) -> str:
                 itemSubType="music-digital",
             )
             response_json = response.json()  # type: ignore[union-attr]
-            # if response_json["numberOfRecords"] == 0 and "import" in infile:
-            #     response = session.brief_bibs_search(
-            #         q=f"se='{row[4]}' AND ti='{row[2]}*'",
-            #         itemSubType="music-digital",
-            #     )
-            #     response_json = response.json()  # type: ignore[union-attr]
             parsed_data = parse_worldcat_results(data=response_json, oclc_num=row[2])
             row.extend(
                 [
@@ -192,11 +186,6 @@ def search_oclc_only(infile: str, last_row: int) -> str:
                     parsed_data["record_source"],
                 ]
             )
-            # if "check" in infile:
-            #     if parsed_data["oclc_number"] == row[2]:
-            #         row.extend([True])
-            #     else:
-            #         row.extend([False])
             save_csv(outfile, row)
             stop = perf_counter()
             print(f"Record {n} of {file_length}, search took {stop-start:0.4f} seconds")
