@@ -1,33 +1,6 @@
 import pandas as pd
 
 
-def dedupe_file(infile: str) -> None:
-    columns = [
-        "URL",
-        "CID",
-        "OCLC_SIERRA",
-        "BIB_ID",
-        "NUMBER_OF_RECORDS",
-        "OCLC_NUM",
-        "RECORD_SOURCE",
-        "URL_STATUS",
-    ]
-    df = pd.read_csv(
-        infile,
-        header=None,
-        names=columns,
-        index_col=False,
-        on_bad_lines="warn",
-    )
-    df.drop_duplicates(inplace=True)
-    print(df.shape[0])
-    df.to_csv(
-        f"{infile.split('.csv')[0]}_deduped.csv",
-        index=False,
-        header=False,
-    )
-
-
 def review_file(infile: str) -> None:
     """
     Reads csv file output from WorldCat API queries and URL checks

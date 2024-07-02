@@ -9,7 +9,7 @@ from naxos_reconcile.prep import (
     prep_csv_sample,
     compare_files,
 )
-from naxos_reconcile.review import review_file, dedupe_file
+from naxos_reconcile.review import review_file
 from naxos_reconcile.check import (
     search_oclc_check_urls,
     search_oclc_only,
