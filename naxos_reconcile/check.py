@@ -237,14 +237,31 @@ def click_homepage(wait: WebDriverWait) -> None:
     button.click()
 
 
+def click_cookie(wait: WebDriverWait) -> None:
+    """wait until cookie button is available and click it"""
+    button = wait.until(EC.element_to_be_clickable((By.ID, "cmpwelcomebtnyes")))
+    button.click()
+
+
+def click_logout(wait: WebDriverWait) -> None:
+    """wait until logout button is available and click it"""
+    button = wait.until(
+        EC.element_to_be_clickable((By.XPATH, "//div[@class='head-use']/a"))
+    )
+    button.click()
+
+
 def check_cookie(wait: WebDriverWait) -> None:
     """
     Check if a cookie button is present on a page. If the button is
     not present, do not wait for it. If it is present, click it.
     """
     try:
-        cookie = wait.until(EC.element_to_be_clickable((By.ID, "cmpwelcomebtnyes")))
-        cookie.click()
+        cookie = wait.until(
+            EC.all_of(EC.element_to_be_clickable((By.ID, "cmpwelcomebtnyes")))
+        )
+        if cookie is True:
+            click_logout(wait=wait)
     except TimeoutException:
         pass
 
@@ -256,9 +273,12 @@ def check_logout(wait: WebDriverWait) -> None:
     """
     try:
         logout = wait.until(
-            EC.element_to_be_clickable((By.XPATH, "//div[@class='head-use']/a"))
+            EC.all_of(
+                EC.element_to_be_clickable((By.XPATH, "//div[@class='head-use']/a"))
+            )
         )
-        logout.click()
+        if logout is True:
+            click_logout(wait=wait)
     except TimeoutException:
         pass
 
