@@ -45,7 +45,6 @@ def parse_worldcat_results(data: dict, oclc_num: str) -> dict:
         - total number of records returned by API query
         - oclc_number (as str or list),
         - cataloging source (as str or list)
-        - whether the OCLC number matches the 001 from Sierra
     """
     match data:
         case {"numberOfRecords": 1}:
@@ -150,18 +149,20 @@ def parse_worldcat_results(data: dict, oclc_num: str) -> dict:
 
 def search_oclc_only(infile: str, last_row: int) -> str:
     """
-    Search worldcat for brief bibs
-    Outputs a .csv file with:
-    - number of records returned by query to Metadata API
+    Search worldcat for brief bibs. Outputs a .csv file with rows from input file
+    as well as additional columns. Data is parsed by parse_worldcat_results function
+    before it is written to the output file.
+    Columns added to output file include:
+    - number of records returned by Metadata API
     - OCLC number(s),
     - source(s) of catalog record
 
     Args:
         infile:
-            filename for file to be used in queries
+            file with data to be used in queries
         last_row:
-            the last row from infile to be checked.
-            CLI command will default to 0 if not provided
+            the last row from infile that has been checked. Can be used to
+            restart process. CLI command will default to 0 if not provided.
     Returns:
         name of .csv outfile as str
     """
@@ -197,18 +198,18 @@ def check_urls_only(infile: str, last_row: int) -> str:
     """
     Check if URLs are live. Outputs a .csv file with status of URL.
     Possible URL statuses:
-    - Live
-    - Dead
-    - Unavailable
-    - Blocked
+    - Live (link is live and accessible)
+    - Dead (link redirects to 404 page)
+    - Unavailable (access restricted in US due to copyright)
+    - Blocked (Naxos has blocked the crawler)
     - Unknown
 
     Args:
         infile:
-            filename for file to be used in queries
+            file with data to be used in queries
         last_row:
-            the last row from infile to be checked.
-            CLI command will default to 0 if not provided
+            the last row from infile that has been checked. Can be used to
+            restart process. CLI command will default to 0 if not provided.
     Returns:
         name of .csv outfile as str
     """
@@ -230,20 +231,6 @@ def check_urls_only(infile: str, last_row: int) -> str:
     return outfile
 
 
-def click_cookie(wait: WebDriverWait) -> None:
-    """wait until cookie button is available and click it"""
-    button = wait.until(EC.element_to_be_clickable((By.ID, "cmpwelcomebtnyes")))
-    button.click()
-
-
-def click_logout(wait: WebDriverWait) -> None:
-    """wait until logout button is available and click it"""
-    button = wait.until(
-        EC.element_to_be_clickable((By.XPATH, "//div[@class='head-use']/a"))
-    )
-    button.click()
-
-
 def click_homepage(wait: WebDriverWait) -> None:
     """wait until homepage button is available and click it"""
     button = wait.until(EC.element_to_be_clickable((By.CLASS_NAME, "notfindCon-btn")))
@@ -256,28 +243,22 @@ def check_cookie(wait: WebDriverWait) -> None:
     not present, do not wait for it. If it is present, click it.
     """
     try:
-        cookie = wait.until(
-            EC.all_of(EC.element_to_be_clickable((By.ID, "cmpwelcomebtnyes")))
-        )
-        if cookie is True:
-            click_cookie(wait=wait)
+        cookie = wait.until(EC.element_to_be_clickable((By.ID, "cmpwelcomebtnyes")))
+        cookie.click()
     except TimeoutException:
         pass
 
 
 def check_logout(wait: WebDriverWait) -> None:
     """
-    Check if a cookie button is present on a page. If the button is
+    Check if a logout button is present on a page. If the button is
     not present, do not wait for it. If it is present, click it.
     """
     try:
         logout = wait.until(
-            EC.all_of(
-                EC.element_to_be_clickable((By.XPATH, "//div[@class='head-use']/a"))
-            )
+            EC.element_to_be_clickable((By.XPATH, "//div[@class='head-use']/a"))
         )
-        if logout is True:
-            click_logout(wait=wait)
+        logout.click()
     except TimeoutException:
         pass
 
@@ -285,15 +266,15 @@ def check_logout(wait: WebDriverWait) -> None:
 def get_selenium_status(wait: WebDriverWait, driver: SB, url: str) -> str:
     """
     Given a URL, try to connect to the page and identify if the resource is
-    available based on content of html. The web driver will wait for the page
-    to load and for specific html tags to be located. The status of the web
-    resource is identified based on the presence of those tags. This function
-    uses SeleniumBase UC mode to appear human to Naxos.
+    available based on html tags. This function uses SeleniumBase UC mode
+    to appear human to Naxos. The web driver will wait for the page
+    to load and the status of the web resource is identified based on
+    the presence of those tags.
 
     Possible statuses:
-    - Live: the resource is available if "@class='song-play'" is on the page,
-    - Dead: the link is dead if "@class='notfindCon-text'" is on the page,
-    - Blocked: Naxos has blocked the crawler if "@id='cardNo'" is on the page,
+    - Live: the resource is available if "@class='song-play'" tag is present,
+    - Dead: the link is dead if "@class='notfindCon-text'" tag is present,
+    - Blocked: Naxos has blocked the crawler if "@id='cardNo'" tag is present,
     - Unavailable: resource is unavailble in US if a "<p>" tag contains
         'title is not available in your country'
     - Unknown: if none of the above tags appear
@@ -302,6 +283,7 @@ def get_selenium_status(wait: WebDriverWait, driver: SB, url: str) -> str:
     platform as necessary.
 
     Args:
+        wait: the WebDriverWait object to use
         driver: the selenium Driver object to use
         url: the url to check
     """
@@ -344,19 +326,21 @@ def get_selenium_status(wait: WebDriverWait, driver: SB, url: str) -> str:
 
 def search_oclc_check_urls(infile: str, last_row: int) -> str:
     """
-    Search worldcat for brief bibs and check if URLs are live
-    Outputs a .csv file with:
-    - number of records returned by query to Metadata API
+    Search worldcat for brief bibs and check if URLs are live using selenium.
+    Outputs a .csv file with rows from input file as well as additional columns.
+    Data is parsed by parse_worldcat_results function before it is written to
+    output file. Columns added to output file include:
+    - number of records returned by Metadata API
     - OCLC number(s),
     - source(s) of catalog record
     - status of URL (Live, Dead, Unavailable, Blocked, or Unknown)
 
     Args:
         infile:
-            filename for file to be used in queries
+            file with data to be used in queries
         last_row:
-            the last row from infile to be checked.
-            CLI command will default to 0 if not provided
+            the last row from infile that has been checked. Can be used to
+            restart process. CLI command will default to 0 if not provided.
     Returns:
         name of .csv outfile as str
     """
