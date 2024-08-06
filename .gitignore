@@ -131,6 +131,6 @@ temp/
 data/files/
 venv-activate.sh
 venvcmd.sh
-
+downloaded_files/
 # OSX
 .DS_Store
