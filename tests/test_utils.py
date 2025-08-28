@@ -2,6 +2,7 @@ import datetime
 import csv
 import os
 import pytest
+from bookops_worldcat import WorldcatAccessToken
 
 from naxos_reconcile.utils import (
     get_file_length,
@@ -49,5 +50,13 @@ def test_open_csv_file():
     assert len(bib_ids) == 4
 
 
-def test_get_token():
+@pytest.mark.livetest
+def test_get_token_live():
     path = os.path.join(os.environ["USERPROFILE"], ".oclc/nyp_wc_test.json")
+    token = get_token(path)
+    assert isinstance(token, WorldcatAccessToken)
+
+
+def test_get_mock_token(mock_creds_file, mock_token_response):
+    token = get_token("foo.json")
+    assert isinstance(token, WorldcatAccessToken)

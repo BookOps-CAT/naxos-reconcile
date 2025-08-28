@@ -1,3 +1,4 @@
+from enum import Enum
 import os
 from time import perf_counter
 from bookops_worldcat import MetadataSession
@@ -20,6 +21,13 @@ from naxos_reconcile.utils import (
 )
 
 ERRORS = [NoSuchElementException, ElementNotInteractableException, TimeoutException]
+
+
+class URLStatus(Enum):
+    LIVE = "//div[@class='song-play']/a"
+    UNAVAILABLE = "//div[@class='playlists-right']/p"
+    DEAD = "//div[@class='notfindCon-text']"
+    BLOCKED = "//input[@id='cardNo']"
 
 
 def parse_worldcat_results(data: dict, oclc_num: str) -> dict:
@@ -102,21 +110,18 @@ def parse_worldcat_results(data: dict, oclc_num: str) -> dict:
             "number_of_records": data["numberOfRecords"],
             "oclc_number": naxos_bibs[0]["oclcNumber"],
             "record_source": naxos_bibs[0]["catalogingInfo"]["catalogingAgency"],
-            "oclc_match": False,
         }
     elif len(full_bibs) == 1:
         return {
             "number_of_records": data["numberOfRecords"],
             "oclc_number": full_bibs[0]["oclcNumber"],
             "record_source": full_bibs[0]["catalogingInfo"]["catalogingAgency"],
-            "oclc_match": False,
         }
     elif len(other_bibs) == 1:
         return {
             "number_of_records": data["numberOfRecords"],
             "oclc_number": other_bibs[0]["oclcNumber"],
             "record_source": other_bibs[0]["catalogingInfo"]["catalogingAgency"],
-            "oclc_match": False,
         }
     elif len(naxos_bibs) > 1:
         return {
@@ -125,7 +130,6 @@ def parse_worldcat_results(data: dict, oclc_num: str) -> dict:
             "record_source": [
                 i["catalogingInfo"]["catalogingAgency"] for i in naxos_bibs
             ],
-            "oclc_match": False,
         }
     elif len(full_bibs) > 1:
         return {
@@ -134,7 +138,6 @@ def parse_worldcat_results(data: dict, oclc_num: str) -> dict:
             "record_source": [
                 i["catalogingInfo"]["catalogingAgency"] for i in full_bibs
             ],
-            "oclc_match": False,
         }
     else:
         return {
@@ -143,7 +146,6 @@ def parse_worldcat_results(data: dict, oclc_num: str) -> dict:
             "record_source": [
                 i["catalogingInfo"]["catalogingAgency"] for i in other_bibs
             ],
-            "oclc_match": False,
         }
 
 
@@ -308,27 +310,31 @@ def get_selenium_status(wait: WebDriverWait, driver: SB, url: str) -> str:
         url: the url to check
     """
     driver.uc_open(url=url)
-    try:
-        wait.until(
-            EC.presence_of_element_located((By.XPATH, "//div[@class='song-play']/a")),
-        )
-        return "Live"
-    except TimeoutException:
-        pass
+    url_status = iter(URLStatus)
+    for status in url_status:
+        try:
+            wait.until(EC.presence_of_element_located(locator=(By.XPATH, status.value)))
+            current_status = status.name
+        except TimeoutException:
+            continue
+        finally:
+            current_status = "Unknown"
+    # if not current_status:
+    #     current_status = "Unknown"
+    return current_status
+
     try:
         wait.until(
             EC.presence_of_element_located(
-                (By.XPATH, "//div[@class='playlists-right']/p")
-            ),
+                locator=(By.XPATH, URLStatus.UNAVAILABLE.value)
+            )
         )
         return "Unavailable"
     except TimeoutException:
         pass
     try:
         wait.until(
-            EC.presence_of_element_located(
-                (By.XPATH, "//div[@class='notfindCon-text']")
-            ),
+            EC.presence_of_element_located(locator=(By.XPATH, URLStatus.DEAD.value))
         )
         click_homepage(wait=wait)
         check_cookie(wait=wait)
@@ -337,7 +343,7 @@ def get_selenium_status(wait: WebDriverWait, driver: SB, url: str) -> str:
         pass
     try:
         wait.until(
-            EC.presence_of_element_located((By.XPATH, "//input[@id='cardNo']")),
+            EC.presence_of_element_located(locator=(By.XPATH, URLStatus.BLOCKED.value)),
         )
         return "Blocked"
     except TimeoutException:
