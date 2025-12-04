@@ -2,7 +2,7 @@
 name = "naxos-reconcile"
 version = "0.1.0"
 description = "A command line tool to help review and reconcile Naxos records"
-authors = ["Charlotte Kostelic <charlottekostelic@gmail.com>"]
+authors = ["Charlotte Kostelic <charlottekostelic@bookops.org>"]
 readme = "README.md"
 
 [tool.setuptools.packages.find]
